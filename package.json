@@ -1,0 +1,28 @@
+{
+  "name": "xstate-parser",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Matt Pocock",
+  "license": "MIT",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "@babel/core": "^7.12.10",
+    "@babel/parser": "^7.12.11",
+    "@babel/traverse": "^7.12.12",
+    "@babel/types": "^7.12.12",
+    "immer": "^9.0.5",
+    "xstate": "^4.16.0"
+  },
+  "devDependencies": {
+    "@types/babel__core": "^7.1.15",
+    "@types/babel__traverse": "^7.14.1",
+    "@types/jest": "^26.0.24",
+    "@types/node": "^16.0.1",
+    "@typescript-eslint/parser": "^4.28.2",
+    "jest": "^27.0.6",
+    "ts-jest": "^27.0.3",
+    "typescript": "^4.3.5"
+  }
+}
