@@ -3,7 +3,13 @@ import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
 import * as t from "@babel/types";
 import produce from "immer";
-import { MachineConfig, StateNodeConfig, TransitionConfig } from "xstate";
+import {
+  MachineConfig,
+  StateNodeConfig,
+  TransitionConfig,
+  TransitionConfigOrTarget,
+  TransitionsConfig,
+} from "xstate";
 
 export const parseMachinesFromFile = (
   fileContents: string,
@@ -93,27 +99,33 @@ const parseStateNodeProperty = (
         });
       }
       case "states": {
-        if (t.isObjectExpression(property.value)) {
-          return parseStatesProperty(property.value, modify);
-        } else {
-          throw new Error("states must be an object expression");
-        }
+        return modify((state) => {
+          if (t.isObjectExpression(property.value)) {
+            state.states = getStatesObject(property.value);
+          } else {
+            throw new Error("states must be an object expression");
+          }
+        });
       }
       case "on": {
-        if (t.isObjectExpression(property.value)) {
-          return parseOnProperty(property.value, modify);
-        } else {
-          throw new Error("on must be an object expression");
-        }
-      }
-      case "after": {
-        if (t.isObjectExpression(property.value)) {
-          return; // TODO
-        } else {
-          throw new Error("after must be an object expression");
-        }
+        return modify((state) => {
+          if (t.isObjectExpression(property.value)) {
+            state.on = getTransitionsConfig(property.value);
+          } else {
+            throw new Error("on must be an object expression");
+          }
+        });
       }
       case "always": {
+        return modify((state) => {
+          if (t.isObjectExpression(property.value)) {
+            state.always = getTransitionConfigOrTarget(property.value);
+          } else {
+            throw new Error("always must be an object expression");
+          }
+        });
+      }
+      case "after": {
         return; // TODO
       }
       case "entry": {
@@ -138,17 +150,16 @@ const parseStateNodeProperty = (
   }
 };
 
-const parseOnProperty = (object: t.ObjectExpression, modify: ModifyMachine) => {
-  modify((state) => {
-    state.on = {};
-  });
+const getTransitionsConfig = (
+  object: t.ObjectExpression,
+): TransitionsConfig<any, any> => {
+  const transitions: TransitionsConfig<any, any> = {};
   object.properties.forEach((property) => {
-    let eventName = "";
     if (t.isObjectProperty(property)) {
       if (t.isIdentifier(property.key)) {
-        eventName = property.key.name;
-
-        parseOnValue(eventName, property.value, modify);
+        transitions[property.key.name] = getTransitionConfigOrTarget(
+          property.value,
+        );
       } else {
         throw new Error("on property key must be an identifier");
       }
@@ -157,39 +168,34 @@ const parseOnProperty = (object: t.ObjectExpression, modify: ModifyMachine) => {
       throw new Error("Object properties of on must be objects");
     }
   });
+
+  return transitions;
 };
 
-const parseOnValue = (
-  eventName: string,
+const getTransitionConfigOrTarget = (
   propertyValue: t.ObjectProperty["value"],
-  modify: ModifyMachine,
-) => {
+): TransitionConfigOrTarget<any, any> => {
+  let result: TransitionConfigOrTarget<any, any> = "";
   if (t.isStringLiteral(propertyValue)) {
-    modify((state) => {
-      // @ts-ignore
-      state.on![eventName] = propertyValue.value;
-    });
+    result = propertyValue.value;
   } else if (t.isObjectExpression(propertyValue)) {
-    const onObject = getOnValueAsObject(eventName, propertyValue);
-    modify((state) => {
-      // @ts-ignore
-      state.on![eventName] = onObject;
-    });
+    const onObject = getTransitionConfig(propertyValue);
+    result = onObject;
   }
+  return result;
 };
 
-const getOnValueAsObject = (
-  eventName: string,
+const getTransitionConfig = (
   object: t.ObjectExpression,
 ): TransitionConfig<any, any> => {
   const transitionConfig: TransitionConfig<any, any> = {};
 
   object.properties.forEach((property) => {
     if (!t.isObjectProperty(property)) {
-      throw new Error(`Property of on[${eventName}] must be object property`);
+      throw new Error(`Property of on must be object property`);
     }
     if (!t.isIdentifier(property.key)) {
-      throw new Error(`Key of on[${eventName}] must be identifier`);
+      throw new Error(`Key of on must be identifier`);
     }
     switch (property.key.name) {
       case "target": {
@@ -205,21 +211,16 @@ const getOnValueAsObject = (
   return transitionConfig;
 };
 
-const parseStatesProperty = (
+const getStatesObject = (
   object: t.ObjectExpression,
-  modify: ModifyMachine,
-) => {
-  modify((state) => {
-    state.states = {};
-  });
+): StateNodeConfig<any, any, any>["states"] => {
+  const states: StateNodeConfig<any, any, any>["states"] = {};
   object.properties.forEach((property) => {
     if (t.isObjectProperty(property)) {
       let stateName = "";
       if (t.isIdentifier(property.key)) {
         stateName = property.key.name;
-        modify((state) => {
-          state.states![stateName] = {};
-        });
+        states[stateName] = {};
       } else {
         throw new Error(
           "Object keys in states property must be string literals",
@@ -228,15 +229,14 @@ const parseStatesProperty = (
 
       if (t.isObjectExpression(property.value)) {
         parseStateNode(property.value, (modification) => {
-          modify((state) => {
-            modification(state.states![stateName]);
-          });
+          states[stateName] = produce(states[stateName], modification);
         });
       }
     } else {
       throw new Error("State nodes must be object properties");
     }
   });
+  return states;
 };
 
 type ModifyMachine = (
