@@ -4,7 +4,11 @@ import traverse from "@babel/traverse";
 import * as t from "@babel/types";
 import produce from "immer";
 import {
+  Action,
+  Actions,
+  InvokeConfig,
   MachineConfig,
+  SingleOrArray,
   StateNodeConfig,
   TransitionConfig,
   TransitionConfigOrTarget,
@@ -118,36 +122,141 @@ const parseStateNodeProperty = (
       }
       case "always": {
         return modify((state) => {
-          if (t.isObjectExpression(property.value)) {
-            state.always = getTransitionConfigOrTarget(property.value);
-          } else {
-            throw new Error("always must be an object expression");
-          }
+          // @ts-ignore
+          state.always = getTransitionConfigOrTarget(property.value);
         });
       }
       case "after": {
         return; // TODO
       }
+      case "onEntry": {
+        return modify((state) => {
+          state.onEntry = getActions(property.value);
+        });
+      }
+      case "onExit": {
+        return modify((state) => {
+          state.onExit = getActions(property.value);
+        });
+      }
       case "entry": {
-        return; // TODO
+        return modify((state) => {
+          state.entry = getActions(property.value);
+        });
       }
       case "exit": {
-        return; // TODO
+        return modify((state) => {
+          state.exit = getActions(property.value);
+        });
       }
       case "history": {
         return; // TODO
       }
       case "onDone": {
-        return; // TODO
+        return modify((state) => {
+          if (t.isObjectExpression(property.value)) {
+            // @ts-ignore
+            state.onDone = getTransitionConfigOrTarget(property.value as any);
+          } else {
+            throw new Error("onDone must be an object expression");
+          }
+        });
       }
       case "invoke": {
-        return; // TODO
+        return modify((state) => {
+          if (
+            t.isObjectExpression(property.value) ||
+            t.isArrayExpression(property.value)
+          ) {
+            state.invoke = getInvokeConfig(property.value);
+          } else {
+            throw new Error("Invoke must be declared as an array or object");
+          }
+        });
       }
       case "meta": {
         return; // TODO
       }
     }
   }
+};
+
+const getInvokeConfig = (
+  invoke: t.ObjectExpression | t.ArrayExpression,
+): SingleOrArray<InvokeConfig<any, any>> => {
+  if (t.isObjectExpression(invoke)) {
+    return getInvokeConfigFromObjectExpression(invoke);
+  }
+  return invoke.elements.map((invokeElem) => {
+    if (t.isObjectExpression(invokeElem)) {
+      return getInvokeConfigFromObjectExpression(invokeElem);
+    }
+    throw new Error("Invoke must be an object");
+  });
+};
+
+const getInvokeConfigFromObjectExpression = (
+  object: t.ObjectExpression,
+): InvokeConfig<any, any> => {
+  const toReturn: InvokeConfig<any, any> = {
+    src: "Anonymous service",
+  };
+
+  object.properties.forEach((property) => {
+    if (!t.isObjectProperty(property)) {
+      throw new Error("Invoke property must be property");
+    }
+    if (!t.isIdentifier(property.key)) {
+      throw new Error("Invoke property key must be identifier");
+    }
+    switch (property.key.name as keyof InvokeConfig<any, any>) {
+      case "id":
+        {
+          if (!t.isStringLiteral(property.value)) {
+            throw new Error("invoke.id must be string literal");
+          }
+          toReturn.id = property.value.value;
+        }
+        break;
+      case "src":
+        {
+          if (!t.isStringLiteral(property.value)) {
+            throw new Error("invoke.src must be string literal");
+          }
+          toReturn.src = property.value.value;
+        }
+        break;
+      case "onDone":
+        {
+          // @ts-ignore
+          toReturn.onDone = getTransitionConfigOrTarget(property.value as any);
+        }
+        break;
+      case "onError":
+        {
+          // @ts-ignore
+          toReturn.onError = getTransitionConfigOrTarget(property.value as any);
+        }
+        break;
+      case "autoForward":
+        {
+          // TODO
+        }
+        break;
+      case "forward":
+        {
+          // TODO
+        }
+        break;
+      case "data":
+        {
+          // TODO
+        }
+        break;
+    }
+  });
+
+  return toReturn;
 };
 
 const getTransitionsConfig = (
@@ -158,7 +267,7 @@ const getTransitionsConfig = (
     if (t.isObjectProperty(property)) {
       if (t.isIdentifier(property.key)) {
         transitions[property.key.name] = getTransitionConfigOrTarget(
-          property.value,
+          property.value as any,
         );
       } else {
         throw new Error("on property key must be an identifier");
@@ -173,19 +282,34 @@ const getTransitionsConfig = (
 };
 
 const getTransitionConfigOrTarget = (
-  propertyValue: t.ObjectProperty["value"],
+  propertyValue: t.Expression | t.SpreadElement | null,
 ): TransitionConfigOrTarget<any, any> => {
   let result: TransitionConfigOrTarget<any, any> = "";
   if (t.isStringLiteral(propertyValue)) {
     result = propertyValue.value;
   } else if (t.isObjectExpression(propertyValue)) {
-    const onObject = getTransitionConfig(propertyValue);
+    const onObject = getTransitionConfigFromObjectExpression(propertyValue);
     result = onObject;
+  } else if (t.isArrayExpression(propertyValue)) {
+    const onArray = getTransitionConfigFromArrayExpression(propertyValue);
+    result = onArray;
+  } else {
+    throw new Error(
+      "Transition config must be either string, object, or array",
+    );
   }
   return result;
 };
 
-const getTransitionConfig = (
+const getTransitionConfigFromArrayExpression = (
+  array: t.ArrayExpression,
+): TransitionConfig<any, any>[] => {
+  return array.elements.map((property) => {
+    return getTransitionConfigOrTarget(property);
+  }) as TransitionConfig<any, any>[];
+};
+
+const getTransitionConfigFromObjectExpression = (
   object: t.ObjectExpression,
 ): TransitionConfig<any, any> => {
   const transitionConfig: TransitionConfig<any, any> = {};
@@ -198,17 +322,68 @@ const getTransitionConfig = (
       throw new Error(`Key of on must be identifier`);
     }
     switch (property.key.name) {
-      case "target": {
-        if (t.isStringLiteral(property.value)) {
-          transitionConfig.target = property.value.value;
-        } else {
-          throw new Error("Targets of transitions must be string literals");
+      case "target":
+        {
+          if (t.isStringLiteral(property.value)) {
+            transitionConfig.target = property.value.value;
+          } else {
+            throw new Error("Targets of transitions must be string literals");
+          }
         }
+        break;
+      case "cond":
+        {
+          if (t.isStringLiteral(property.value)) {
+            transitionConfig.cond = property.value.value;
+          } else if (
+            t.isFunctionExpression(property.value) ||
+            t.isArrowFunctionExpression(property.value)
+          ) {
+            transitionConfig.cond = function cond() {
+              // TODO - reconsider if cond is the best
+              // idea here
+              return true;
+            };
+          } else {
+            console.log(property.value);
+            throw new Error(
+              "target.cond must be string literal or function expression",
+            );
+          }
+        }
+        break;
+      case "actions": {
+        transitionConfig.actions = getActions(property.value);
       }
     }
   });
 
   return transitionConfig;
+};
+
+const getActions = (action: any): Actions<any, any> => {
+  if (t.isArrayExpression(action)) {
+    return action.elements.map((elem) => {
+      if (
+        t.isStringLiteral(elem) ||
+        t.isFunctionExpression(elem) ||
+        t.isArrowFunctionExpression(elem)
+      ) {
+        return getAction(elem);
+      }
+      throw new Error("Actions must be string literals or functions");
+    });
+  }
+  return getAction(action);
+};
+
+const getAction = (
+  action: t.StringLiteral | t.FunctionExpression | t.ArrowFunctionExpression,
+): Action<any, any> => {
+  if (t.isStringLiteral(action)) {
+    return action.value;
+  }
+  return "hello";
 };
 
 const getStatesObject = (
