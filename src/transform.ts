@@ -6,6 +6,7 @@ import produce from "immer";
 import {
   Action,
   Actions,
+  DelayedTransitions,
   InvokeConfig,
   MachineConfig,
   SingleOrArray,
@@ -127,7 +128,9 @@ const parseStateNodeProperty = (
         });
       }
       case "after": {
-        return; // TODO
+        return modify((state) => {
+          state.after = getDelayedTransitions(property.value);
+        });
       }
       case "onEntry": {
         return modify((state) => {
@@ -179,6 +182,29 @@ const parseStateNodeProperty = (
       }
     }
   }
+};
+
+const getDelayedTransitions = (after: {}): DelayedTransitions<any, any> => {
+  if (!t.isObjectExpression(after)) {
+    throw new Error("After must be expressed as an object");
+  }
+
+  const delayedTransitions: DelayedTransitions<any, any> = {};
+
+  after.properties.forEach((property) => {
+    if (!t.isObjectProperty(property)) {
+      throw new Error(`After value must be an object property`);
+    }
+    if (!t.isStringLiteral(property.key) && !t.isNumericLiteral(property.key)) {
+      console.log(property.key);
+      throw new Error(`After key must be string or number literal`);
+    }
+    // @ts-ignore
+    delayedTransitions[property.key.value] = getTransitionConfigOrTarget(
+      property.value,
+    );
+  });
+  return delayedTransitions;
 };
 
 const getInvokeConfig = (
@@ -282,7 +308,7 @@ const getTransitionsConfig = (
 };
 
 const getTransitionConfigOrTarget = (
-  propertyValue: t.Expression | t.SpreadElement | null,
+  propertyValue: {} | null,
 ): TransitionConfigOrTarget<any, any> => {
   let result: TransitionConfigOrTarget<any, any> = "";
   if (t.isStringLiteral(propertyValue)) {
