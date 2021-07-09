@@ -6,7 +6,9 @@ import produce from "immer";
 import {
   Action,
   Actions,
-  actions,
+  actions as xstateActions,
+  ChooseConditon,
+  Condition,
   DelayedTransitions,
   InvokeConfig,
   MachineConfig,
@@ -247,10 +249,23 @@ const getInvokeConfigFromObjectExpression = (
         break;
       case "src":
         {
-          if (!t.isStringLiteral(property.value)) {
+          if (t.isStringLiteral(property.value)) {
+            toReturn.src = property.value.value;
+          } else if (
+            t.isArrowFunctionExpression(property.value) ||
+            t.isFunctionExpression(property.value)
+          ) {
+            toReturn.src = function src() {
+              return () => {};
+            };
+          } else if (t.isIdentifier(property.value)) {
+            toReturn.src = function src() {
+              return () => {};
+            };
+          } else {
+            console.log(property.value);
             throw new Error("invoke.src must be string literal");
           }
-          toReturn.src = property.value.value;
         }
         break;
       case "onDone":
@@ -360,23 +375,7 @@ const getTransitionConfigFromObjectExpression = (
         break;
       case "cond":
         {
-          if (t.isStringLiteral(property.value)) {
-            transitionConfig.cond = property.value.value;
-          } else if (
-            t.isFunctionExpression(property.value) ||
-            t.isArrowFunctionExpression(property.value)
-          ) {
-            transitionConfig.cond = function cond() {
-              // TODO - reconsider if cond is the best
-              // idea here
-              return true;
-            };
-          } else {
-            console.log(property.value);
-            throw new Error(
-              "target.cond must be string literal or function expression",
-            );
-          }
+          transitionConfig.cond = getCond(property.value);
         }
         break;
       case "actions": {
@@ -386,6 +385,26 @@ const getTransitionConfigFromObjectExpression = (
   });
 
   return transitionConfig;
+};
+
+const getCond = (cond: {}): Condition<any, any> => {
+  if (t.isStringLiteral(cond)) {
+    return cond.value;
+  } else if (
+    t.isFunctionExpression(cond) ||
+    t.isArrowFunctionExpression(cond)
+  ) {
+    return function cond() {
+      // TODO - reconsider if cond is the best
+      // idea here
+      return true;
+    };
+  } else {
+    console.log(cond);
+    throw new Error(
+      "target.cond must be string literal or function expression",
+    );
+  }
 };
 
 const getActions = (action: any): Actions<any, any> => {
@@ -407,14 +426,16 @@ const getAction = (action: {} | null): Action<any, any> => {
     if (!t.isIdentifier(action.callee)) {
       throw new Error("Action callee must be an identifier");
     }
-    switch (action.callee.name as keyof typeof actions) {
+    switch (action.callee.name as keyof typeof xstateActions) {
       case "assign":
-        return actions.assign(() => {});
+        return xstateActions.assign(() => {});
       // TODO - calculate all actions here
       case "send":
-        return actions.send("");
+        return xstateActions.send("");
       case "forwardTo":
-        return actions.forwardTo("");
+        return getForwardToAction(action);
+      case "choose":
+        return getChooseAction(action);
       default:
         return () => {};
     }
@@ -429,7 +450,54 @@ const getAction = (action: {} | null): Action<any, any> => {
   throw new Error(
     "Action must be string literal, known XState action or function/arrow function expression",
   );
-  return "hello";
+};
+
+const getForwardToAction = (action: t.CallExpression): Action<any, any> => {
+  const idArgument = action.arguments[0];
+
+  if (t.isStringLiteral(idArgument)) {
+    return xstateActions.forwardTo(idArgument.value);
+  }
+  throw new Error("forwardToAction arguments[0] must be a string");
+};
+
+const getChooseAction = (action: t.CallExpression): Action<any, any> => {
+  const arrayArgument = action.arguments[0];
+
+  if (!t.isArrayExpression(arrayArgument)) {
+    throw new Error("choose arguments[0] must be an array");
+  }
+
+  const toReturn: Array<ChooseConditon<any, any>> = [];
+
+  arrayArgument.elements.forEach((elem, index) => {
+    if (!t.isObjectExpression(elem)) {
+      throw new Error(`choose arguments[0][${index}] must be an object`);
+    }
+    toReturn.push({
+      actions: [],
+    });
+    elem.properties.forEach((property) => {
+      if (!t.isObjectProperty(property)) {
+        throw new Error(
+          `choose arguments[0][${index}] properties must be object properties`,
+        );
+      }
+      if (!t.isIdentifier(property.key)) {
+        throw new Error(`choose arguments[0][${index}] key must be identifier`);
+      }
+
+      switch (property.key.name as keyof ChooseConditon<any, any>) {
+        case "actions":
+          toReturn[toReturn.length - 1].actions = getActions(property.value);
+          break;
+        case "cond":
+          toReturn[toReturn.length - 1].cond = getCond(property.value);
+      }
+    });
+  });
+
+  return xstateActions.choose(toReturn);
 };
 
 const getStatesObject = (

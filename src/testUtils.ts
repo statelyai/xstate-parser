@@ -25,7 +25,12 @@ const withoutContext = (config: MachineConfig<any, any, any>) => {
   return newConfig;
 };
 
+const serialise = (machine: any) => {
+  return JSON.stringify(machine, null, 2);
+};
+
 export const testUtils = {
   parseFileFromExamplesDir,
   withoutContext,
+  serialise,
 };
