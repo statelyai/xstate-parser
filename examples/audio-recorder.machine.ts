@@ -85,8 +85,8 @@ const audioRecorderMachine = createMachine<
           src: "recordFromStream",
           onError: {
             target: "recordingFailed",
-            actions: (context, error) => {
-              console.error(error);
+            actions: (context, event) => {
+              console.error(event);
             },
           },
         },

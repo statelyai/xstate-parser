@@ -6,6 +6,7 @@ import produce from "immer";
 import {
   Action,
   Actions,
+  actions,
   DelayedTransitions,
   InvokeConfig,
   MachineConfig,
@@ -390,25 +391,44 @@ const getTransitionConfigFromObjectExpression = (
 const getActions = (action: any): Actions<any, any> => {
   if (t.isArrayExpression(action)) {
     return action.elements.map((elem) => {
-      if (
-        t.isStringLiteral(elem) ||
-        t.isFunctionExpression(elem) ||
-        t.isArrowFunctionExpression(elem)
-      ) {
-        return getAction(elem);
-      }
-      throw new Error("Actions must be string literals or functions");
+      return getAction(elem);
     });
   }
   return getAction(action);
 };
 
-const getAction = (
-  action: t.StringLiteral | t.FunctionExpression | t.ArrowFunctionExpression,
-): Action<any, any> => {
+const getAction = (action: {} | null): Action<any, any> => {
   if (t.isStringLiteral(action)) {
     return action.value;
   }
+  // console.log(action);
+
+  if (t.isCallExpression(action)) {
+    if (!t.isIdentifier(action.callee)) {
+      throw new Error("Action callee must be an identifier");
+    }
+    switch (action.callee.name as keyof typeof actions) {
+      case "assign":
+        return actions.assign(() => {});
+      // TODO - calculate all actions here
+      case "send":
+        return actions.send("");
+      case "forwardTo":
+        return actions.forwardTo("");
+      default:
+        return () => {};
+    }
+    // action.callee;
+  }
+
+  if (t.isArrowFunctionExpression(action) || t.isFunctionExpression(action)) {
+    return function actions() {};
+  }
+
+  console.log(action);
+  throw new Error(
+    "Action must be string literal, known XState action or function/arrow function expression",
+  );
   return "hello";
 };
 
