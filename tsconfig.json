@@ -19,8 +19,8 @@
     "jsx": "preserve",
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx"
+    "src",
+    "test"
   ],
   "exclude": [
     "node_modules"
