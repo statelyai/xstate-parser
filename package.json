@@ -1,6 +1,6 @@
 {
   "name": "xstate-parser-demo",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "main": "lib/index.js",
   "author": "Matt Pocock",
   "license": "MIT",
@@ -13,8 +13,10 @@
     "@babel/core": "^7.12.10",
     "@babel/parser": "^7.12.11",
     "@babel/traverse": "^7.12.12",
-    "@babel/types": "^7.12.12",
-    "xstate": "^4.22.0"
+    "@babel/types": "^7.12.12"
+  },
+  "peerDependencies": {
+    "xstate": "^4"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.14.7",
@@ -25,6 +27,7 @@
     "@types/node": "^16.0.1",
     "jest": "^27.0.6",
     "patch-package": "^6.4.7",
-    "typescript": "^4.3.5"
+    "typescript": "^4.3.5",
+    "xstate": "^4.22.0"
   }
 }
