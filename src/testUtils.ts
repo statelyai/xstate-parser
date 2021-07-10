@@ -1,18 +1,16 @@
 import fs from "fs";
 import path from "path";
-import { createMachine } from "xstate";
 import * as XStateParser from "./index";
+import { MachineParseResult } from "./transform";
 
-const parseFileFromExamplesDir = async (
-  filename: string,
-): Promise<XStateParser.StateMachine<any, any, any>[]> => {
+const parseFileFromExamplesDir = (filename: string): MachineParseResult[] => {
   const asString = fs
     .readFileSync(path.resolve(__dirname, "../examples", filename))
     .toString();
 
-  const result = await XStateParser.parseMachinesFromFile(asString);
+  const result = XStateParser.parseMachinesFromFile(asString);
 
-  return result.map(({ config }) => createMachine(config));
+  return result;
 };
 
 const withoutContext = <T extends { context?: any }>(

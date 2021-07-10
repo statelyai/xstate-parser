@@ -21,6 +21,23 @@ import {
 export interface MachineParseResult {
   config: MachineConfig<any, any, any>;
   node: t.ObjectExpression;
+  statesMeta: MachineParseResultState[];
+}
+
+export interface MachineParseResultState {
+  path: string[];
+  location: Location;
+  targets: MachineParseResultTarget[];
+}
+
+export interface MachineParseResultTarget {
+  location: Location;
+  target: string;
+}
+
+export interface Location {
+  start: number;
+  end: number;
 }
 
 export const parseMachinesFromFile = (
@@ -42,9 +59,11 @@ export const parseMachinesFromFile = (
           const machineConfig = path.node.arguments[0];
 
           if (t.isObjectExpression(machineConfig)) {
+            const result = parseStateNode(machineConfig, []);
             machines.push({
-              config: parseStateNode(machineConfig),
+              config: result.config,
               node: machineConfig,
+              statesMeta: result.statesMeta,
             });
           } else if (t.isIdentifier(machineConfig)) {
             const variableDeclarator = findVariableDeclaratorWithName(
@@ -58,9 +77,12 @@ export const parseMachinesFromFile = (
             if (!t.isObjectExpression(variableDeclarator.init)) {
               throw new Error("Machine config must be an object expression");
             }
+            const result = parseStateNode(variableDeclarator.init, []);
+
             machines.push({
               node: variableDeclarator.init,
-              config: parseStateNode(variableDeclarator.init),
+              config: result.config,
+              statesMeta: result.statesMeta,
             });
           } else {
             throw new Error("Machine config must be an object expression");
@@ -91,33 +113,59 @@ export const findVariableDeclaratorWithName = (
 };
 
 export const parseStateNode = (
-  config: t.ObjectExpression,
-): StateNodeConfig<any, any, any> => {
-  const properties = config.properties;
+  object: t.ObjectExpression,
+  path: string[],
+): {
+  config: StateNodeConfig<any, any, any>;
+  statesMeta: MachineParseResultState[];
+} => {
+  const properties = object.properties;
 
   const stateNode: StateNodeConfig<any, any, any> = {};
+  const childStatesMeta: MachineParseResultState[] = [];
+  const targets: MachineParseResultTarget[] = [];
 
   properties.forEach((property) => {
     if (t.isObjectProperty(property)) {
-      Object.assign(stateNode, parseStateNodeProperty(property));
+      const result = parseStateNodeProperty(property, path);
+      Object.assign(stateNode, result.configPartial);
+      if (result.childStatesMeta) {
+        childStatesMeta.push(...result.childStatesMeta);
+      }
+      if (result.targets) {
+        targets.push(...result.targets);
+      }
     } else {
       throw new Error("Properties on a state node must be object properties");
     }
   });
 
-  return stateNode;
+  const thisNodeMeta: MachineParseResultState = {
+    path,
+    location: getLocationFromNode(object),
+    targets,
+  };
+
+  return { config: stateNode, statesMeta: [thisNodeMeta, ...childStatesMeta] };
 };
 
 export const parseStateNodeProperty = (
   property: t.ObjectProperty,
-): Partial<StateNodeConfig<any, any, any>> => {
+  path: string[],
+): {
+  configPartial: Partial<StateNodeConfig<any, any, any>>;
+  targets?: MachineParseResultTarget[];
+  childStatesMeta?: MachineParseResultState[];
+} => {
   if (t.isIdentifier(property.key)) {
     const keyName = property.key.name as keyof StateNodeConfig<any, any, any>;
     switch (keyName) {
       case "id": {
         if (t.isStringLiteral(property.value)) {
           return {
-            id: property.value.value,
+            configPartial: {
+              id: property.value.value,
+            },
           };
         } else {
           throw new Error("id must be string literal");
@@ -126,7 +174,9 @@ export const parseStateNodeProperty = (
       case "initial": {
         if (t.isStringLiteral(property.value)) {
           return {
-            initial: property.value.value,
+            configPartial: {
+              initial: property.value.value,
+            },
           };
         } else {
           throw new Error("initial must be string literal");
@@ -135,7 +185,9 @@ export const parseStateNodeProperty = (
       case "type": {
         if (t.isStringLiteral(property.value)) {
           return {
-            type: property.value.value as any,
+            configPartial: {
+              type: property.value.value as any,
+            },
           };
         } else {
           throw new Error("type must be string literal");
@@ -143,8 +195,12 @@ export const parseStateNodeProperty = (
       }
       case "states": {
         if (t.isObjectExpression(property.value)) {
+          const result = getStatesObject(property.value, path);
           return {
-            states: getStatesObject(property.value),
+            configPartial: {
+              states: result.config,
+            },
+            childStatesMeta: result.statesMeta,
           };
         } else {
           throw new Error("states must be an object expression");
@@ -152,72 +208,116 @@ export const parseStateNodeProperty = (
       }
       case "on": {
         if (t.isObjectExpression(property.value)) {
-          return { on: getTransitionsConfig(property.value) };
+          const result = getTransitionsConfig(property.value);
+          return {
+            configPartial: { on: result.config },
+            targets: result.targetsMeta,
+          };
         } else {
           throw new Error("on must be an object expression");
         }
       }
       case "always": {
+        const result = getTransitionConfigOrTarget(property.value);
         return {
-          always: getTransitionConfigOrTarget(property.value),
+          configPartial: {
+            always: result.config,
+          },
+          targets: result.targetsMeta,
         };
       }
       case "after": {
+        const result = getDelayedTransitions(property.value);
         return {
-          after: getDelayedTransitions(property.value),
+          configPartial: {
+            after: result.config,
+          },
+          targets: result.targets,
         };
       }
       case "onEntry": {
         return {
-          onEntry: getActions(property.value),
+          configPartial: {
+            onEntry: getActions(property.value),
+          },
         };
       }
       case "onExit": {
-        return { onExit: getActions(property.value) };
+        return {
+          configPartial: {
+            onExit: getActions(property.value),
+          },
+        };
       }
       case "entry": {
-        return { entry: getActions(property.value) };
+        return {
+          configPartial: {
+            entry: getActions(property.value),
+          },
+        };
       }
       case "exit": {
-        return { exit: getActions(property.value) };
+        return {
+          configPartial: {
+            exit: getActions(property.value),
+          },
+        };
       }
       case "history": {
-        return {}; // TODO
+        return {
+          configPartial: {},
+        }; // TODO
       }
       case "onDone": {
-        // @ts-ignore
-        return { onDone: getTransitionConfigOrTarget(property.value as any) };
+        const result = getTransitionConfigOrTarget(property.value as any);
+        return {
+          configPartial: {
+            onDone: result.config as any,
+          },
+          targets: result.targetsMeta,
+        };
       }
       case "invoke": {
         if (
           t.isObjectExpression(property.value) ||
           t.isArrayExpression(property.value)
         ) {
-          return { invoke: getInvokeConfig(property.value) };
+          const result = getInvokeConfig(property.value);
+          return {
+            configPartial: {
+              invoke: result.config,
+            },
+            targets: result.targetsMeta,
+          };
         } else {
           throw new Error("Invoke must be declared as an array or object");
         }
       }
       case "meta": {
-        return {}; // TODO
+        return {
+          configPartial: {},
+        }; // TODO
       }
       default: {
-        return {};
+        return {
+          configPartial: {},
+        };
       }
     }
   }
   throw new Error("Property key of state node must be identifier");
 };
 
-export const getDelayedTransitions = (after: {}): DelayedTransitions<
-  any,
-  any
-> => {
+export const getDelayedTransitions = (after: {}): {
+  config: DelayedTransitions<any, any>;
+  targets: MachineParseResultTarget[];
+} => {
   if (!t.isObjectExpression(after)) {
     throw new Error("After must be expressed as an object");
   }
 
   const delayedTransitions: DelayedTransitions<any, any> = {};
+  const targets: MachineParseResultTarget[] = [];
 
   after.properties.forEach((property) => {
     if (!t.isObjectProperty(property)) {
@@ -227,34 +327,50 @@ export const getDelayedTransitions = (after: {}): DelayedTransitions<
       console.log(property.key);
       throw new Error(`After key must be string or number literal`);
     }
-    // @ts-ignore
-    delayedTransitions[property.key.value] = getTransitionConfigOrTarget(
-      property.value,
-    );
+    const result = getTransitionConfigOrTarget(property.value);
+
+    delayedTransitions[property.key.value] = result.config as any;
+    targets.push(...result.targetsMeta);
   });
-  return delayedTransitions;
+  return { config: delayedTransitions, targets };
 };
 
 export const getInvokeConfig = (
   invoke: t.ObjectExpression | t.ArrayExpression,
-): SingleOrArray<InvokeConfig<any, any>> => {
+): {
+  config: SingleOrArray<InvokeConfig<any, any>>;
+  targetsMeta: MachineParseResultTarget[];
+} => {
   if (t.isObjectExpression(invoke)) {
     return getInvokeConfigFromObjectExpression(invoke);
   }
-  return invoke.elements.map((invokeElem) => {
+  const invokes: InvokeConfig<any, any>[] = [];
+  const targetsMeta: MachineParseResultTarget[] = [];
+  invoke.elements.forEach((invokeElem) => {
     if (t.isObjectExpression(invokeElem)) {
-      return getInvokeConfigFromObjectExpression(invokeElem);
+      const result = getInvokeConfigFromObjectExpression(invokeElem);
+      invokes.push(result.config);
+      targetsMeta.push(...result.targetsMeta);
     }
     throw new Error("Invoke must be an object");
   });
+
+  return {
+    config: invokes,
+    targetsMeta,
+  };
 };
 
 export const getInvokeConfigFromObjectExpression = (
   object: t.ObjectExpression,
-): InvokeConfig<any, any> => {
+): {
+  config: InvokeConfig<any, any>;
+  targetsMeta: MachineParseResultTarget[];
+} => {
   const toReturn: InvokeConfig<any, any> = {
     src: "Anonymous service",
   };
+  const targetsMeta: MachineParseResultTarget[] = [];
 
   object.properties.forEach((property) => {
     if (!t.isObjectProperty(property)) {
@@ -295,14 +411,16 @@ export const getInvokeConfigFromObjectExpression = (
         break;
       case "onDone":
         {
-          // @ts-ignore
-          toReturn.onDone = getTransitionConfigOrTarget(property.value as any);
+          const result = getTransitionConfigOrTarget(property.value as any);
+          toReturn.onDone = result.config as any;
+          targetsMeta.push(...result.targetsMeta);
         }
         break;
       case "onError":
         {
-          // @ts-ignore
-          toReturn.onError = getTransitionConfigOrTarget(property.value as any);
+          const result = getTransitionConfigOrTarget(property.value as any);
+          toReturn.onError = result.config as any;
+          targetsMeta.push(...result.targetsMeta);
         }
         break;
       case "autoForward":
@@ -323,23 +441,30 @@ export const getInvokeConfigFromObjectExpression = (
     }
   });
 
-  return toReturn;
+  return {
+    config: toReturn,
+    targetsMeta,
+  };
 };
 
 export const getTransitionsConfig = (
   object: t.ObjectExpression,
-): TransitionsConfig<any, any> => {
+): {
+  config: TransitionsConfig<any, any>;
+  targetsMeta: MachineParseResultTarget[];
+} => {
   const transitions: TransitionsConfig<any, any> = {};
+  const targetsMeta: MachineParseResultTarget[] = [];
   object.properties.forEach((property) => {
     if (t.isObjectProperty(property)) {
       if (t.isIdentifier(property.key)) {
-        transitions[property.key.name] = getTransitionConfigOrTarget(
-          property.value,
-        );
+        const result = getTransitionConfigOrTarget(property.value);
+        transitions[property.key.name] = result.config;
+        targetsMeta.push(...result.targetsMeta);
       } else if (t.isStringLiteral(property.key)) {
-        transitions[property.key.value] = getTransitionConfigOrTarget(
-          property.value,
-        );
+        const result = getTransitionConfigOrTarget(property.value);
+        transitions[property.key.value] = result.config;
+        targetsMeta.push(...result.targetsMeta);
       } else {
         console.log(property.key);
         throw new Error("on property key must be an identifier");
@@ -350,41 +475,73 @@ export const getTransitionsConfig = (
     }
   });
 
-  return transitions;
+  return {
+    config: transitions,
+    targetsMeta,
+  };
 };
 
 export const getTransitionConfigOrTarget = (
   propertyValue: {} | null,
-): TransitionConfigOrTarget<any, any> => {
-  let result: TransitionConfigOrTarget<any, any> = "";
+): {
+  config: TransitionConfigOrTarget<any, any>;
+  targetsMeta: MachineParseResultTarget[];
+} => {
+  let transitionConfigOrTarget: TransitionConfigOrTarget<any, any> = "";
+  const targetsMeta: MachineParseResultTarget[] = [];
   if (t.isStringLiteral(propertyValue)) {
-    result = propertyValue.value;
+    transitionConfigOrTarget = propertyValue.value;
+    targetsMeta.push({
+      location: getLocationFromNode(propertyValue),
+      target: propertyValue.value,
+    });
   } else if (t.isObjectExpression(propertyValue)) {
-    const onObject = getTransitionConfigFromObjectExpression(propertyValue);
-    result = onObject;
+    const result = getTransitionConfigFromObjectExpression(propertyValue);
+    transitionConfigOrTarget = result.config;
+    targetsMeta.push(...result.targetsMeta);
   } else if (t.isArrayExpression(propertyValue)) {
-    const onArray = getTransitionConfigFromArrayExpression(propertyValue);
-    result = onArray;
+    const result = getTransitionConfigFromArrayExpression(propertyValue);
+    transitionConfigOrTarget = result.config;
+    targetsMeta.push(...result.targetsMeta);
   } else {
     throw new Error(
       "Transition config must be either string, object, or array",
     );
   }
-  return result;
+  return {
+    config: transitionConfigOrTarget,
+    targetsMeta,
+  };
 };
 
 export const getTransitionConfigFromArrayExpression = (
   array: t.ArrayExpression,
-): TransitionConfig<any, any>[] => {
-  return array.elements.map((property) => {
-    return getTransitionConfigOrTarget(property);
-  }) as TransitionConfig<any, any>[];
+): {
+  config: TransitionConfig<any, any>[];
+  targetsMeta: MachineParseResultTarget[];
+} => {
+  const config: TransitionConfig<any, any>[] = [];
+  const targetsMeta: MachineParseResultTarget[] = [];
+  array.elements.forEach((property) => {
+    const result = getTransitionConfigOrTarget(property);
+    config.push(result.config as any);
+    targetsMeta.push(...targetsMeta);
+  });
+
+  return {
+    config,
+    targetsMeta,
+  };
 };
 
 export const getTransitionConfigFromObjectExpression = (
   object: t.ObjectExpression,
-): TransitionConfig<any, any> => {
+): {
+  config: TransitionConfigOrTarget<any, any>;
+  targetsMeta: MachineParseResultTarget[];
+} => {
   const transitionConfig: TransitionConfig<any, any> = {};
+  const targetsMeta: MachineParseResultTarget[] = [];
 
   object.properties.forEach((property) => {
     if (!t.isObjectProperty(property)) {
@@ -398,6 +555,10 @@ export const getTransitionConfigFromObjectExpression = (
         {
           if (t.isStringLiteral(property.value)) {
             transitionConfig.target = property.value.value;
+            targetsMeta.push({
+              location: getLocationFromNode(property.value),
+              target: property.value.value,
+            });
           } else {
             throw new Error("Targets of transitions must be string literals");
           }
@@ -414,7 +575,10 @@ export const getTransitionConfigFromObjectExpression = (
     }
   });
 
-  return transitionConfig;
+  return {
+    config: transitionConfig,
+    targetsMeta: targetsMeta,
+  };
 };
 
 export const getCond = (cond: {}): Condition<any, any> => {
@@ -553,8 +717,13 @@ const getChooseAction = (action: t.CallExpression): Action<any, any> => {
 
 const getStatesObject = (
   object: t.ObjectExpression,
-): StateNodeConfig<any, any, any>["states"] => {
+  path: string[],
+): {
+  config: StateNodeConfig<any, any, any>["states"];
+  statesMeta: MachineParseResultState[];
+} => {
   const states: StateNodeConfig<any, any, any>["states"] = {};
+  const statesMeta: MachineParseResultState[] = [];
   object.properties.forEach((property) => {
     if (t.isObjectProperty(property)) {
       let stateName = "";
@@ -568,11 +737,23 @@ const getStatesObject = (
       }
 
       if (t.isObjectExpression(property.value)) {
-        states[stateName] = parseStateNode(property.value);
+        const result = parseStateNode(property.value, [...path, stateName]);
+        states[stateName] = result.config;
+        statesMeta.push(...result.statesMeta);
       }
     } else {
       throw new Error("State nodes must be object properties");
     }
   });
-  return states;
+  return {
+    config: states,
+    statesMeta,
+  };
+};
+
+const getLocationFromNode = (node: t.Node): Location => {
+  return {
+    start: node.start!,
+    end: node.end!,
+  };
 };
