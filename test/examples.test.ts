@@ -22,10 +22,9 @@ describe("Examples", () => {
             parsedMachines[index].config,
           );
         } catch (e) {
-          // Allow a pass if it serializes to the same string
-          expect(e.message).toContain(
-            "Received: serializes to the same string",
-          );
+          if (!e.message.includes("Received: serializes to the same string")) {
+            throw e;
+          }
         }
       });
     });

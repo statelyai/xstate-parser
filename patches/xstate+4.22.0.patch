@@ -1,0 +1,21 @@
+diff --git a/node_modules/xstate/lib/actions.js b/node_modules/xstate/lib/actions.js
+index 7bbadb5..40f4926 100644
+--- a/node_modules/xstate/lib/actions.js
++++ b/node_modules/xstate/lib/actions.js
+@@ -77,11 +77,11 @@ function toActionObject(action, actionFunctionMap) {
+             actionObject = action;
+         }
+     }
+-    Object.defineProperty(actionObject, 'toString', {
+-        value: function () { return actionObject.type; },
+-        enumerable: false,
+-        configurable: true
+-    });
++    // Object.defineProperty(actionObject, 'toString', {
++    //     value: function () { return actionObject.type; },
++    //     enumerable: false,
++    //     configurable: true
++    // });
+     return actionObject;
+ }
+ exports.toActionObject = toActionObject;

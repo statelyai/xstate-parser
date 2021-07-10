@@ -309,9 +309,14 @@ const getTransitionsConfig = (
     if (t.isObjectProperty(property)) {
       if (t.isIdentifier(property.key)) {
         transitions[property.key.name] = getTransitionConfigOrTarget(
-          property.value as any,
+          property.value,
+        );
+      } else if (t.isStringLiteral(property.key)) {
+        transitions[property.key.value] = getTransitionConfigOrTarget(
+          property.value,
         );
       } else {
+        console.log(property.key);
         throw new Error("on property key must be an identifier");
       }
     } else {
@@ -423,19 +428,40 @@ const getAction = (action: {} | null): Action<any, any> => {
   // console.log(action);
 
   if (t.isCallExpression(action)) {
-    if (!t.isIdentifier(action.callee)) {
-      throw new Error("Action callee must be an identifier");
+    let actionName = "";
+    if (t.isIdentifier(action.callee)) {
+      // raise()
+      actionName = action.callee.name;
+    } else if (
+      t.isMemberExpression(action.callee) &&
+      t.isIdentifier(action.callee.property)
+    ) {
+      // actions.raise()
+      actionName = action.callee.property.name;
+    } else {
+      throw new Error(
+        "Action callee must be an identifier or member expression",
+      );
     }
-    switch (action.callee.name as keyof typeof xstateActions) {
+
+    switch (actionName as keyof typeof xstateActions) {
       case "assign":
         return xstateActions.assign(() => {});
       // TODO - calculate all actions here
-      case "send":
-        return xstateActions.send("");
+      case "send": {
+        const obj = Object.create({ type: "ANY" });
+        return xstateActions.send(obj); // TODO
+      }
+      case "sendParent": {
+        const obj = Object.create({ type: "ANY" });
+        return xstateActions.sendParent(obj); // TODO
+      }
       case "forwardTo":
         return getForwardToAction(action);
       case "choose":
         return getChooseAction(action);
+      case "stop":
+        return xstateActions.stop("");
       default:
         return () => {};
     }
