@@ -1,14 +1,13 @@
 {
   "name": "xstate-parser-demo",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "main": "lib/index.js",
   "author": "Matt Pocock",
   "license": "MIT",
   "scripts": {
     "test": "jest",
-    "postinstall": "patch-package",
     "build": "tsc",
-    "prepare": "yarn build"
+    "prepare": "patch-package && yarn build"
   },
   "dependencies": {
     "@babel/core": "^7.12.10",
