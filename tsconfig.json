@@ -1,26 +1,28 @@
 {
   "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "composite": true,
     "target": "es5",
-    "lib": [
-      "esnext",
-      "DOM"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
+    "declaration": true,
+    "declarationMap": true,
     "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noFallthroughCasesInSwitch": true,
-    "jsx": "preserve",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "strictNullChecks": true,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "jsx": "react",
+    "lib": [
+      "es6",
+      "dom"
+    ],
+    "strictPropertyInitialization": true,
+    "outDir": "./lib",
+    "rootDir": "./src",
   },
   "include": [
     "src",
-    "test"
   ],
   "exclude": [
     "node_modules"

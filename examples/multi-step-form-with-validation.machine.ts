@@ -43,9 +43,11 @@ const multiStepFormMachine = createMachine<
       enteringBeneficiary: {
         initial: "idle",
         id: "enteringBeneficiary",
-        onDone: {
-          target: "enteringDate",
-        },
+        onDone: [
+          {
+            target: "enteringDate",
+          },
+        ],
         states: {
           idle: {
             exit: ["clearErrorMessage"],

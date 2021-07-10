@@ -12,17 +12,21 @@ import {
   InvokeConfig,
   MachineConfig,
   SingleOrArray,
-  StateNode,
   StateNodeConfig,
   TransitionConfig,
   TransitionConfigOrTarget,
   TransitionsConfig,
 } from "xstate";
 
+export interface MachineParseResult {
+  config: MachineConfig<any, any, any>;
+  node: t.ObjectExpression;
+}
+
 export const parseMachinesFromFile = (
   fileContents: string,
-): MachineConfig<any, any, any>[] => {
-  const machines: MachineConfig<any, any, any>[] = [];
+): MachineParseResult[] => {
+  const machines: MachineParseResult[] = [];
 
   const parseResult = parser.parse(fileContents, {
     sourceType: "module",
@@ -38,7 +42,10 @@ export const parseMachinesFromFile = (
           const machineConfig = path.node.arguments[0];
 
           if (t.isObjectExpression(machineConfig)) {
-            machines.push(parseStateNode(machineConfig));
+            machines.push({
+              config: parseStateNode(machineConfig),
+              node: machineConfig,
+            });
           } else if (t.isIdentifier(machineConfig)) {
             const variableDeclarator = findVariableDeclaratorWithName(
               parseResult,
@@ -51,7 +58,10 @@ export const parseMachinesFromFile = (
             if (!t.isObjectExpression(variableDeclarator.init)) {
               throw new Error("Machine config must be an object expression");
             }
-            machines.push(parseStateNode(variableDeclarator.init));
+            machines.push({
+              node: variableDeclarator.init,
+              config: parseStateNode(variableDeclarator.init),
+            });
           } else {
             throw new Error("Machine config must be an object expression");
           }
@@ -63,7 +73,7 @@ export const parseMachinesFromFile = (
   return machines;
 };
 
-const findVariableDeclaratorWithName = (
+export const findVariableDeclaratorWithName = (
   file: any,
   name: string,
 ): t.VariableDeclarator | null | undefined => {
@@ -80,7 +90,7 @@ const findVariableDeclaratorWithName = (
   return declarator;
 };
 
-const parseStateNode = (
+export const parseStateNode = (
   config: t.ObjectExpression,
 ): StateNodeConfig<any, any, any> => {
   const properties = config.properties;
@@ -98,7 +108,7 @@ const parseStateNode = (
   return stateNode;
 };
 
-const parseStateNodeProperty = (
+export const parseStateNodeProperty = (
   property: t.ObjectProperty,
 ): Partial<StateNodeConfig<any, any, any>> => {
   if (t.isIdentifier(property.key)) {
@@ -175,12 +185,8 @@ const parseStateNodeProperty = (
         return {}; // TODO
       }
       case "onDone": {
-        if (t.isObjectExpression(property.value)) {
-          // @ts-ignore
-          return { onDone: getTransitionConfigOrTarget(property.value as any) };
-        } else {
-          throw new Error("onDone must be an object expression");
-        }
+        // @ts-ignore
+        return { onDone: getTransitionConfigOrTarget(property.value as any) };
       }
       case "invoke": {
         if (
@@ -203,7 +209,10 @@ const parseStateNodeProperty = (
   throw new Error("Property key of state node must be identifier");
 };
 
-const getDelayedTransitions = (after: {}): DelayedTransitions<any, any> => {
+export const getDelayedTransitions = (after: {}): DelayedTransitions<
+  any,
+  any
+> => {
   if (!t.isObjectExpression(after)) {
     throw new Error("After must be expressed as an object");
   }
@@ -226,7 +235,7 @@ const getDelayedTransitions = (after: {}): DelayedTransitions<any, any> => {
   return delayedTransitions;
 };
 
-const getInvokeConfig = (
+export const getInvokeConfig = (
   invoke: t.ObjectExpression | t.ArrayExpression,
 ): SingleOrArray<InvokeConfig<any, any>> => {
   if (t.isObjectExpression(invoke)) {
@@ -240,7 +249,7 @@ const getInvokeConfig = (
   });
 };
 
-const getInvokeConfigFromObjectExpression = (
+export const getInvokeConfigFromObjectExpression = (
   object: t.ObjectExpression,
 ): InvokeConfig<any, any> => {
   const toReturn: InvokeConfig<any, any> = {
@@ -317,7 +326,7 @@ const getInvokeConfigFromObjectExpression = (
   return toReturn;
 };
 
-const getTransitionsConfig = (
+export const getTransitionsConfig = (
   object: t.ObjectExpression,
 ): TransitionsConfig<any, any> => {
   const transitions: TransitionsConfig<any, any> = {};
@@ -344,7 +353,7 @@ const getTransitionsConfig = (
   return transitions;
 };
 
-const getTransitionConfigOrTarget = (
+export const getTransitionConfigOrTarget = (
   propertyValue: {} | null,
 ): TransitionConfigOrTarget<any, any> => {
   let result: TransitionConfigOrTarget<any, any> = "";
@@ -364,7 +373,7 @@ const getTransitionConfigOrTarget = (
   return result;
 };
 
-const getTransitionConfigFromArrayExpression = (
+export const getTransitionConfigFromArrayExpression = (
   array: t.ArrayExpression,
 ): TransitionConfig<any, any>[] => {
   return array.elements.map((property) => {
@@ -372,7 +381,7 @@ const getTransitionConfigFromArrayExpression = (
   }) as TransitionConfig<any, any>[];
 };
 
-const getTransitionConfigFromObjectExpression = (
+export const getTransitionConfigFromObjectExpression = (
   object: t.ObjectExpression,
 ): TransitionConfig<any, any> => {
   const transitionConfig: TransitionConfig<any, any> = {};
@@ -408,7 +417,7 @@ const getTransitionConfigFromObjectExpression = (
   return transitionConfig;
 };
 
-const getCond = (cond: {}): Condition<any, any> => {
+export const getCond = (cond: {}): Condition<any, any> => {
   if (t.isStringLiteral(cond)) {
     return cond.value;
   } else if (
@@ -428,7 +437,7 @@ const getCond = (cond: {}): Condition<any, any> => {
   }
 };
 
-const getActions = (action: any): Actions<any, any> => {
+export const getActions = (action: any): Actions<any, any> => {
   if (t.isArrayExpression(action)) {
     return action.elements.map((elem) => {
       return getAction(elem);
@@ -437,7 +446,7 @@ const getActions = (action: any): Actions<any, any> => {
   return getAction(action);
 };
 
-const getAction = (action: {} | null): Action<any, any> => {
+export const getAction = (action: {} | null): Action<any, any> => {
   if (t.isStringLiteral(action)) {
     return action.value;
   }
@@ -567,7 +576,3 @@ const getStatesObject = (
   });
   return states;
 };
-
-type ModifyMachine = (
-  modifier: (machine: StateNodeConfig<any, any, any>) => void,
-) => void;
