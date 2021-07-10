@@ -59,9 +59,7 @@ const parseStateNode = (
 
   properties.forEach((property) => {
     if (t.isObjectProperty(property)) {
-      parseStateNodeProperty(property, (modification) => {
-        modification(stateNode);
-      });
+      Object.assign(stateNode, parseStateNodeProperty(property));
     } else {
       throw new Error("Properties on a state node must be object properties");
     }
@@ -72,117 +70,107 @@ const parseStateNode = (
 
 const parseStateNodeProperty = (
   property: t.ObjectProperty,
-  modify: ModifyMachine,
-) => {
+): Partial<StateNodeConfig<any, any, any>> => {
   if (t.isIdentifier(property.key)) {
     const keyName = property.key.name as keyof StateNodeConfig<any, any, any>;
     switch (keyName) {
       case "id": {
-        return modify((state) => {
-          if (t.isStringLiteral(property.value)) {
-            state.id = property.value.value;
-          } else {
-            throw new Error("id must be string literal");
-          }
-        });
+        if (t.isStringLiteral(property.value)) {
+          return {
+            id: property.value.value,
+          };
+        } else {
+          throw new Error("id must be string literal");
+        }
       }
       case "initial": {
-        return modify((state) => {
-          if (t.isStringLiteral(property.value)) {
-            state.initial = property.value.value;
-          } else {
-            throw new Error("initial must be string literal");
-          }
-        });
+        if (t.isStringLiteral(property.value)) {
+          return {
+            initial: property.value.value,
+          };
+        } else {
+          throw new Error("initial must be string literal");
+        }
       }
       case "type": {
-        return modify((state) => {
-          if (t.isStringLiteral(property.value)) {
-            state.type = property.value.value as any;
-          } else {
-            throw new Error("type must be string literal");
-          }
-        });
+        if (t.isStringLiteral(property.value)) {
+          return {
+            type: property.value.value as any,
+          };
+        } else {
+          throw new Error("type must be string literal");
+        }
       }
       case "states": {
-        return modify((state) => {
-          if (t.isObjectExpression(property.value)) {
-            state.states = getStatesObject(property.value);
-          } else {
-            throw new Error("states must be an object expression");
-          }
-        });
+        if (t.isObjectExpression(property.value)) {
+          return {
+            states: getStatesObject(property.value),
+          };
+        } else {
+          throw new Error("states must be an object expression");
+        }
       }
       case "on": {
-        return modify((state) => {
-          if (t.isObjectExpression(property.value)) {
-            state.on = getTransitionsConfig(property.value);
-          } else {
-            throw new Error("on must be an object expression");
-          }
-        });
+        if (t.isObjectExpression(property.value)) {
+          return { on: getTransitionsConfig(property.value) };
+        } else {
+          throw new Error("on must be an object expression");
+        }
       }
       case "always": {
-        return modify((state) => {
-          // @ts-ignore
-          state.always = getTransitionConfigOrTarget(property.value);
-        });
+        return {
+          always: getTransitionConfigOrTarget(property.value),
+        };
       }
       case "after": {
-        return modify((state) => {
-          state.after = getDelayedTransitions(property.value);
-        });
+        return {
+          after: getDelayedTransitions(property.value),
+        };
       }
       case "onEntry": {
-        return modify((state) => {
-          state.onEntry = getActions(property.value);
-        });
+        return {
+          onEntry: getActions(property.value),
+        };
       }
       case "onExit": {
-        return modify((state) => {
-          state.onExit = getActions(property.value);
-        });
+        return { onExit: getActions(property.value) };
       }
       case "entry": {
-        return modify((state) => {
-          state.entry = getActions(property.value);
-        });
+        return { entry: getActions(property.value) };
       }
       case "exit": {
-        return modify((state) => {
-          state.exit = getActions(property.value);
-        });
+        return { exit: getActions(property.value) };
       }
       case "history": {
-        return; // TODO
+        return {}; // TODO
       }
       case "onDone": {
-        return modify((state) => {
-          if (t.isObjectExpression(property.value)) {
-            // @ts-ignore
-            state.onDone = getTransitionConfigOrTarget(property.value as any);
-          } else {
-            throw new Error("onDone must be an object expression");
-          }
-        });
+        if (t.isObjectExpression(property.value)) {
+          // @ts-ignore
+          return { onDone: getTransitionConfigOrTarget(property.value as any) };
+        } else {
+          throw new Error("onDone must be an object expression");
+        }
       }
       case "invoke": {
-        return modify((state) => {
-          if (
-            t.isObjectExpression(property.value) ||
-            t.isArrayExpression(property.value)
-          ) {
-            state.invoke = getInvokeConfig(property.value);
-          } else {
-            throw new Error("Invoke must be declared as an array or object");
-          }
-        });
+        if (
+          t.isObjectExpression(property.value) ||
+          t.isArrayExpression(property.value)
+        ) {
+          return { invoke: getInvokeConfig(property.value) };
+        } else {
+          throw new Error("Invoke must be declared as an array or object");
+        }
       }
       case "meta": {
-        return; // TODO
+        return {}; // TODO
+      }
+      default: {
+        return {};
       }
     }
   }
+  throw new Error("Property key of state node must be identifier");
 };
 
 const getDelayedTransitions = (after: {}): DelayedTransitions<any, any> => {
