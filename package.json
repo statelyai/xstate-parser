@@ -1,6 +1,6 @@
 {
   "name": "xstate-parser-demo",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "main": "lib/index.js",
   "author": "Matt Pocock",
   "license": "MIT",
