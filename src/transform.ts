@@ -39,6 +39,19 @@ export const parseMachinesFromFile = (
 
           if (t.isObjectExpression(machineConfig)) {
             machines.push(parseStateNode(machineConfig));
+          } else if (t.isIdentifier(machineConfig)) {
+            const variableDeclarator = findVariableDeclaratorWithName(
+              parseResult,
+              machineConfig.name,
+            );
+
+            if (!variableDeclarator) {
+              throw new Error("Could not find machine config in this file");
+            }
+            if (!t.isObjectExpression(variableDeclarator.init)) {
+              throw new Error("Machine config must be an object expression");
+            }
+            machines.push(parseStateNode(variableDeclarator.init));
           } else {
             throw new Error("Machine config must be an object expression");
           }
@@ -48,6 +61,23 @@ export const parseMachinesFromFile = (
   });
 
   return machines;
+};
+
+const findVariableDeclaratorWithName = (
+  file: any,
+  name: string,
+): t.VariableDeclarator | null | undefined => {
+  let declarator: t.VariableDeclarator | null | undefined = null;
+
+  traverse(file, {
+    VariableDeclarator(path) {
+      if (t.isIdentifier(path.node.id) && path.node.id.name === name) {
+        declarator = path.node as any;
+      }
+    },
+  });
+
+  return declarator;
 };
 
 const parseStateNode = (
