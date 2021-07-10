@@ -14,7 +14,6 @@
     "@babel/parser": "^7.12.11",
     "@babel/traverse": "^7.12.12",
     "@babel/types": "^7.12.12",
-    "immer": "^9.0.5",
     "xstate": "^4.22.0"
   },
   "devDependencies": {

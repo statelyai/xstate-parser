@@ -2,7 +2,6 @@ import * as parser from "@babel/parser";
 // import * as parser from "@typescript-eslint/parser";
 import traverse from "@babel/traverse";
 import * as t from "@babel/types";
-import produce from "immer";
 import {
   Action,
   Actions,
@@ -13,6 +12,7 @@ import {
   InvokeConfig,
   MachineConfig,
   SingleOrArray,
+  StateNode,
   StateNodeConfig,
   TransitionConfig,
   TransitionConfigOrTarget,
@@ -23,12 +23,6 @@ export const parseMachinesFromFile = (
   fileContents: string,
 ): MachineConfig<any, any, any>[] => {
   const machines: MachineConfig<any, any, any>[] = [];
-
-  const makeMachineModifier =
-    (index: number): ModifyMachine =>
-    (modification) => {
-      machines[index] = produce(machines[index], modification);
-    };
 
   const parseResult = parser.parse(fileContents, {
     sourceType: "module",
@@ -44,11 +38,7 @@ export const parseMachinesFromFile = (
           const machineConfig = path.node.arguments[0];
 
           if (t.isObjectExpression(machineConfig)) {
-            machines.push({});
-            parseStateNode(
-              machineConfig,
-              makeMachineModifier(machines.length - 1),
-            );
+            machines.push(parseStateNode(machineConfig));
           } else {
             throw new Error("Machine config must be an object expression");
           }
@@ -60,16 +50,24 @@ export const parseMachinesFromFile = (
   return machines;
 };
 
-const parseStateNode = (config: t.ObjectExpression, modify: ModifyMachine) => {
+const parseStateNode = (
+  config: t.ObjectExpression,
+): StateNodeConfig<any, any, any> => {
   const properties = config.properties;
+
+  const stateNode: StateNodeConfig<any, any, any> = {};
 
   properties.forEach((property) => {
     if (t.isObjectProperty(property)) {
-      parseStateNodeProperty(property, modify);
+      parseStateNodeProperty(property, (modification) => {
+        modification(stateNode);
+      });
     } else {
       throw new Error("Properties on a state node must be object properties");
     }
   });
+
+  return stateNode;
 };
 
 const parseStateNodeProperty = (
@@ -543,9 +541,7 @@ const getStatesObject = (
       }
 
       if (t.isObjectExpression(property.value)) {
-        parseStateNode(property.value, (modification) => {
-          states[stateName] = produce(states[stateName], modification);
-        });
+        states[stateName] = parseStateNode(property.value);
       }
     } else {
       throw new Error("State nodes must be object properties");
