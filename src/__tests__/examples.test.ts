@@ -38,8 +38,8 @@ describe("Examples", () => {
           ).toBeTruthy();
           state.targets.forEach((target) => {
             const targetFromText = fileAsString.slice(
-              target.location.start,
-              target.location.end,
+              target.location.start.absoluteChar,
+              target.location.end.absoluteChar,
             );
 
             expect(targetFromText.slice(1, -1)).toEqual(target.target);

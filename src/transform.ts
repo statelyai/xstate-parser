@@ -36,8 +36,14 @@ export interface MachineParseResultTarget {
 }
 
 export interface Location {
-  start: number;
-  end: number;
+  start: LineAndCharLocation;
+  end: LineAndCharLocation;
+}
+
+export interface LineAndCharLocation {
+  absoluteChar: number;
+  line: number;
+  column: number;
 }
 
 export const parseMachinesFromFile = (
@@ -351,8 +357,9 @@ export const getInvokeConfig = (
       const result = getInvokeConfigFromObjectExpression(invokeElem);
       invokes.push(result.config);
       targetsMeta.push(...result.targetsMeta);
+    } else {
+      throw new Error("Invoke must be an object");
     }
-    throw new Error("Invoke must be an object");
   });
 
   return {
@@ -399,13 +406,18 @@ export const getInvokeConfigFromObjectExpression = (
             toReturn.src = function src() {
               return () => {};
             };
-          } else if (t.isIdentifier(property.value)) {
+          } else if (
+            t.isIdentifier(property.value) ||
+            t.isMemberExpression(property.value)
+          ) {
             toReturn.src = function src() {
               return () => {};
             };
           } else {
             console.log(property.value);
-            throw new Error("invoke.src must be string literal");
+            throw new Error(
+              "invoke.src must be string literal, arrow function, function or identifier",
+            );
           }
         }
         break;
@@ -525,7 +537,7 @@ export const getTransitionConfigFromArrayExpression = (
   array.elements.forEach((property) => {
     const result = getTransitionConfigOrTarget(property);
     config.push(result.config as any);
-    targetsMeta.push(...targetsMeta);
+    targetsMeta.push(...result.targetsMeta);
   });
 
   return {
@@ -585,18 +597,18 @@ export const getCond = (cond: {}): Condition<any, any> => {
   if (t.isStringLiteral(cond)) {
     return cond.value;
   } else if (
+    t.isIdentifier(cond) ||
+    t.isMemberExpression(cond) ||
     t.isFunctionExpression(cond) ||
     t.isArrowFunctionExpression(cond)
   ) {
     return function cond() {
-      // TODO - reconsider if cond is the best
-      // idea here
       return true;
     };
   } else {
     console.log(cond);
     throw new Error(
-      "target.cond must be string literal or function expression",
+      "target.cond must be string literal, function expression, identifier or member expression",
     );
   }
 };
@@ -613,6 +625,10 @@ export const getActions = (action: any): Actions<any, any> => {
 export const getAction = (action: {} | null): Action<any, any> => {
   if (t.isStringLiteral(action)) {
     return action.value;
+  }
+
+  if (t.isIdentifier(action) || t.isMemberExpression(action)) {
+    return function actions() {};
   }
   // console.log(action);
 
@@ -753,7 +769,15 @@ const getStatesObject = (
 
 const getLocationFromNode = (node: t.Node): Location => {
   return {
-    start: node.start!,
-    end: node.end!,
+    start: {
+      absoluteChar: node.start!,
+      column: node.loc?.start.column!,
+      line: node.loc?.start.line!,
+    },
+    end: {
+      absoluteChar: node.end!,
+      column: node.loc?.end.column!,
+      line: node.loc?.end.line!,
+    },
   };
 };
