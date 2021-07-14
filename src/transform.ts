@@ -51,6 +51,13 @@ export const parseMachinesFromFile = (
 ): MachineParseResult[] => {
   const machines: MachineParseResult[] = [];
 
+  if (
+    !fileContents.includes("createMachine") &&
+    !fileContents.includes("Machine")
+  ) {
+    return [];
+  }
+
   const parseResult = parser.parse(fileContents, {
     sourceType: "module",
     plugins: ["typescript"],
