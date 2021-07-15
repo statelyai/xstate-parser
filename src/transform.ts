@@ -27,7 +27,12 @@ export interface MachineParseResult {
 export interface MachineParseResultState {
   path: string[];
   location: Location;
+  /**
+   * Metadata for the 'initial' property of a state
+   */
+  initial: MachineParseResultTarget | undefined;
   targets: MachineParseResultTarget[];
+  node: t.ObjectExpression;
 }
 
 export interface MachineParseResultTarget {
@@ -60,46 +65,54 @@ export const parseMachinesFromFile = (
 
   const parseResult = parser.parse(fileContents, {
     sourceType: "module",
-    plugins: ["typescript"],
+    plugins: ["typescript", "jsx"],
   });
 
   traverse(parseResult as any, {
     CallExpression(path) {
       const callee = path.node.callee;
 
+      let calleeName = "";
+
       if (t.isIdentifier(callee)) {
-        if (["Machine", "createMachine"].includes(callee.name)) {
-          const machineConfig = path.node.arguments[0];
+        calleeName = callee.name;
+      } else if (t.isMemberExpression(callee)) {
+        if (t.isIdentifier(callee.property)) {
+          calleeName = callee.property.name;
+        }
+      }
 
-          if (t.isObjectExpression(machineConfig)) {
-            const result = parseStateNode(machineConfig, []);
-            machines.push({
-              config: result.config,
-              node: machineConfig,
-              statesMeta: result.statesMeta,
-            });
-          } else if (t.isIdentifier(machineConfig)) {
-            const variableDeclarator = findVariableDeclaratorWithName(
-              parseResult,
-              machineConfig.name,
-            );
+      if (["Machine", "createMachine"].includes(calleeName)) {
+        const machineConfig = path.node.arguments[0];
 
-            if (!variableDeclarator) {
-              throw new Error("Could not find machine config in this file");
-            }
-            if (!t.isObjectExpression(variableDeclarator.init)) {
-              throw new Error("Machine config must be an object expression");
-            }
-            const result = parseStateNode(variableDeclarator.init, []);
+        if (t.isObjectExpression(machineConfig)) {
+          const result = parseStateNode(machineConfig, []);
+          machines.push({
+            config: result.config,
+            node: machineConfig,
+            statesMeta: result.statesMeta,
+          });
+        } else if (t.isIdentifier(machineConfig)) {
+          const variableDeclarator = findVariableDeclaratorWithName(
+            parseResult,
+            machineConfig.name,
+          );
 
-            machines.push({
-              node: variableDeclarator.init,
-              config: result.config,
-              statesMeta: result.statesMeta,
-            });
-          } else {
+          if (!variableDeclarator) {
+            throw new Error("Could not find machine config in this file");
+          }
+          if (!t.isObjectExpression(variableDeclarator.init)) {
             throw new Error("Machine config must be an object expression");
           }
+          const result = parseStateNode(variableDeclarator.init, []);
+
+          machines.push({
+            node: variableDeclarator.init,
+            config: result.config,
+            statesMeta: result.statesMeta,
+          });
+        } else {
+          throw new Error("Machine config must be an object expression");
         }
       }
     },
@@ -137,6 +150,7 @@ export const parseStateNode = (
   const stateNode: StateNodeConfig<any, any, any> = {};
   const childStatesMeta: MachineParseResultState[] = [];
   const targets: MachineParseResultTarget[] = [];
+  let initialMeta: MachineParseResultTarget | undefined = undefined;
 
   properties.forEach((property) => {
     if (t.isObjectProperty(property)) {
@@ -148,6 +162,9 @@ export const parseStateNode = (
       if (result.targets) {
         targets.push(...result.targets);
       }
+      if (result.initialMeta) {
+        initialMeta = result.initialMeta;
+      }
     } else {
       throw new Error("Properties on a state node must be object properties");
     }
@@ -157,6 +174,8 @@ export const parseStateNode = (
     path,
     location: getLocationFromNode(object),
     targets,
+    initial: initialMeta,
+    node: object,
   };
 
   return { config: stateNode, statesMeta: [thisNodeMeta, ...childStatesMeta] };
@@ -169,6 +188,7 @@ export const parseStateNodeProperty = (
   configPartial: Partial<StateNodeConfig<any, any, any>>;
   targets?: MachineParseResultTarget[];
   childStatesMeta?: MachineParseResultState[];
+  initialMeta?: MachineParseResultTarget;
 } => {
   if (t.isIdentifier(property.key)) {
     const keyName = property.key.name as keyof StateNodeConfig<any, any, any>;
@@ -189,6 +209,10 @@ export const parseStateNodeProperty = (
           return {
             configPartial: {
               initial: property.value.value,
+            },
+            initialMeta: {
+              target: property.value.value,
+              location: getLocationFromNode(property.value),
             },
           };
         } else {
@@ -753,9 +777,13 @@ const getStatesObject = (
       if (t.isIdentifier(property.key)) {
         stateName = property.key.name;
         states[stateName] = {};
+      } else if (t.isStringLiteral(property.key)) {
+        stateName = property.key.value;
+        states[stateName] = {};
       } else {
+        console.log(property.key);
         throw new Error(
-          "Object keys in states property must be string literals",
+          "Object keys in states property must be identifiers or string literals",
         );
       }
 
