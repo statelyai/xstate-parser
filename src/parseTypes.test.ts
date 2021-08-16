@@ -1,13 +1,13 @@
 import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
-import { MachineCallExpression, parse, ParseContext } from "./parseTypes";
+import { MachineCallExpression, parse, ParseResult } from "./parseTypes";
 
-const testParser = (fileContents: string): ParseContext => {
+const testParser = (fileContents: string) => {
   const parseResult = parser.parse(fileContents, {
     sourceType: "module",
     plugins: ["typescript", "jsx"],
   });
-  let result: any;
+  let result: ParseResult = undefined as unknown as ParseResult;
   traverse(parseResult as any, {
     CallExpression(path: any) {
       result = parse(path.node, MachineCallExpression);
@@ -18,9 +18,9 @@ const testParser = (fileContents: string): ParseContext => {
 };
 
 describe("parseTypes", () => {
-  test("bleh", () => {
+  test("it should handle ids correctly", () => {
     const result = testParser(`createMachine({ id: 'wow' })`);
 
-    console.log(result);
+    expect(result[1].id?.value).toEqual("wow");
   });
 });
