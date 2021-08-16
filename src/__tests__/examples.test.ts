@@ -32,19 +32,19 @@ describe("Examples", () => {
           }
         }
 
-        parsedMachines[index].statesMeta.forEach((state) => {
-          expect(
-            exampleMachines[index].getStateNodeByPath(state.path),
-          ).toBeTruthy();
-          state.targets.forEach((target) => {
-            const targetFromText = fileAsString.slice(
-              target.location.start.absoluteChar,
-              target.location.end.absoluteChar,
-            );
+        //   parsedMachines[index].statesMeta.forEach((state) => {
+        //     expect(
+        //       exampleMachines[index].getStateNodeByPath(state.path),
+        //     ).toBeTruthy();
+        //     state.targets.forEach((target) => {
+        //       const targetFromText = fileAsString.slice(
+        //         target.location.start.absoluteChar,
+        //         target.location.end.absoluteChar,
+        //       );
 
-            expect(targetFromText.slice(1, -1)).toEqual(target.target);
-          });
-        });
+        //       expect(targetFromText.slice(1, -1)).toEqual(target.target);
+        //     });
+        //   });
       });
     });
   });

@@ -6,8 +6,8 @@ const StateNodeId = new Parser({
   name: "StateNodeId",
   babelMatcher: t.isStringLiteral,
   getMetaFromNode: (node, context) => {
-    context.updateCurrentMachine((machine) => {
-      machine.id = {
+    context.updateCurrentState((state) => {
+      state.id = {
         value: node.value,
         loc: node.loc,
       };
@@ -18,19 +18,13 @@ const StateNodeId = new Parser({
 const StateNodeInitial = new Parser({
   name: "StateNodeInitial",
   babelMatcher: t.isStringLiteral,
-  getMetaFromNode: (node) => {
-    return {
-      stateMeta: {
-        id: {
-          value: node.value,
-          loc: node.loc,
-        },
-        initial: {
-          loc: node.loc,
-          value: node.value,
-        },
-      },
-    };
+  getMetaFromNode: (node, context) => {
+    context.updateCurrentState((state) => {
+      state.initial = {
+        value: node.value,
+        loc: node.loc,
+      };
+    });
   },
 });
 

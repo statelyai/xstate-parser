@@ -1,5 +1,6 @@
 import * as t from "@babel/types";
-import { MachineMeta, StateMeta } from "./types";
+import { MachineConfig } from "xstate";
+import { MachineMeta, ParseResult, StateMeta } from "./types";
 
 export class ParseContext {
   private id = 0;
@@ -10,12 +11,12 @@ export class ParseContext {
   private incrementInternalId = () => this.id++;
 
   enterNewMachine = (callee: MachineMeta["callee"]) => {
-    this.incrementInternalId();
     this.currentMachineId = `${this.id}`;
     this.machineMap[this.id] = {
       callee,
       states: {},
     };
+    this.incrementInternalId();
   };
 
   updateCurrentMachine = (update: (machine: MachineMeta) => void) => {
@@ -72,5 +73,40 @@ export class ParseContext {
     this.currentStatePath.pop();
   };
 
-  getResult = () => this.machineMap;
+  getResult = (): ParseResult => {
+    const result: ParseResult = {};
+
+    for (const machineKey in this.machineMap) {
+      const meta = this.machineMap[machineKey];
+      result[machineKey] = {
+        meta,
+        config: stateMetaToNodeConfig(meta),
+      };
+    }
+
+    return result;
+  };
 }
+
+const stateMetaToNodeConfig = (
+  meta: StateMeta,
+): MachineConfig<any, any, any> => {
+  const config: MachineConfig<any, any, any> = {};
+
+  if (meta.id?.value) {
+    config.id = meta.id?.value;
+  }
+  if (meta.initial?.value) {
+    config.initial = meta.initial?.value;
+  }
+
+  if (Object.keys(meta.states).length > 0) {
+    config.states = {};
+
+    Object.entries(meta.states).forEach(([key, stateMeta]) => {
+      config.states![key] = stateMetaToNodeConfig(stateMeta);
+    });
+  }
+
+  return config;
+};

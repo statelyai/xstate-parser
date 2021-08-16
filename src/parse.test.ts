@@ -23,8 +23,8 @@ describe("parseTypes", () => {
   test("it should handle ids correctly", () => {
     const result = testParser(`createMachine({ id: 'wow', type: 'atomic' })`);
 
-    expect(result[1].id?.value).toEqual("wow");
-    expect(result[1].type?.value).toEqual("atomic");
+    expect(result[1].meta.id?.value).toEqual("wow");
+    expect(result[1].meta.type?.value).toEqual("atomic");
   });
 
   test("it should handle nested states correctly", () => {
@@ -39,7 +39,7 @@ describe("parseTypes", () => {
       c: {}
     } })`);
 
-    expect(Object.keys(result[1].states)).toEqual(["a", "b", "c"]);
-    expect(Object.keys(result[1].states.b.states)).toEqual(["b1", "b2"]);
+    expect(Object.keys(result[1].meta.states)).toEqual(["a", "b", "c"]);
+    expect(Object.keys(result[1].meta.states.b.states)).toEqual(["b1", "b2"]);
   });
 });

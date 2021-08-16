@@ -1,5 +1,6 @@
 export type BabelMatcher<T extends t.Node> = (node: any) => node is T;
 import * as t from "@babel/types";
+import { MachineConfig } from "xstate";
 import { ParseContext } from "./ParseContext";
 import { Parser } from "./Parser";
 
@@ -44,7 +45,10 @@ export type GetChildren<T extends t.Node> = (
   node: T,
 ) => void;
 
-export type ParseResult = Record<string, MachineMeta>;
+export type ParseResult = Record<
+  string,
+  { meta: MachineMeta; config: MachineConfig<any, any, any> }
+>;
 
 export interface ParserOptionalProps<T extends t.Node> {
   getMetaFromNode?: GetMetaFromNode<T>;
