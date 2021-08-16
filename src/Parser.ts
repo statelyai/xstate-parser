@@ -30,6 +30,8 @@ export class Parser<T extends t.Node = t.Node> {
     return context.getResult();
   };
 
+  matches = (node: t.Node) => this.babelMatcher(node);
+
   private parseNode = (node: t.Node, context: ParseContext) => {
     // console.log(this.name, node);
     if (!this.babelMatcher(node)) return null;
@@ -38,8 +40,8 @@ export class Parser<T extends t.Node = t.Node> {
       parser.parse(node, context);
     };
 
-    this.getChildren?.(parseChildren, node);
-
     this.getMetaFromNode?.(node, context, parseChildren);
+
+    this.getChildren?.(parseChildren, node);
   };
 }

@@ -1,5 +1,5 @@
 import * as t from "@babel/types";
-import { MachineConfig } from "xstate";
+import { InvokeConfig, MachineConfig } from "xstate";
 import { MachineMeta, ParseResult, StateMeta } from "./types";
 
 export class ParseContext {
@@ -15,6 +15,8 @@ export class ParseContext {
     this.machineMap[this.id] = {
       callee,
       states: {},
+      invokes: [],
+      transitions: {},
     };
     this.incrementInternalId();
   };
@@ -64,6 +66,8 @@ export class ParseContext {
           loc: valueNodeLoc,
         },
         states: {},
+        invokes: [],
+        transitions: {},
       };
     });
     this.currentStatePath.push(key);
@@ -100,7 +104,29 @@ const stateMetaToNodeConfig = (
     config.initial = meta.initial?.value;
   }
 
-  if (Object.keys(meta.states).length > 0) {
+  if (hasAtLeastOneKey(meta.transitions)) {
+    config.on = {};
+
+    Object.entries(meta.transitions).forEach(([key, transition]) => {
+      (config.on as any)[key] = transition.targets.map((targetConfig) => {
+        return {
+          target: targetConfig.target,
+        };
+      });
+    });
+  }
+
+  if (meta.invokes.length > 0) {
+    const newInvoke: InvokeConfig<any, any>[] = [];
+    meta.invokes.forEach((invoke) => {
+      newInvoke.push({
+        src: invoke.src?.value!,
+        id: invoke.id?.value,
+      });
+    });
+  }
+
+  if (hasAtLeastOneKey(meta.states)) {
     config.states = {};
 
     Object.entries(meta.states).forEach(([key, stateMeta]) => {
@@ -109,4 +135,8 @@ const stateMetaToNodeConfig = (
   }
 
   return config;
+};
+
+const hasAtLeastOneKey = (obj: object) => {
+  return Object.keys(obj).length > 0;
 };

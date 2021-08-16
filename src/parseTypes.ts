@@ -1,6 +1,6 @@
 import * as t from "@babel/types";
 import { Parser } from "./Parser";
-import { ParserOptionalProps } from "./types";
+import { Location, ParserOptionalProps } from "./types";
 
 const StateNodeId = new Parser({
   name: "StateNodeId",
@@ -41,29 +41,31 @@ const StateNodeType = new Parser({
   },
 });
 
-// const Identifier = new Parser({
-//   babelMatcher: t.isIdentifier,
-// });
+const UnionType = (parsers: Parser<any>[]) =>
+  new Parser({
+    name: "UnionType",
+    babelMatcher: (node: any): node is any => {
+      return parsers.some((parser) => parser.matches(node));
+    },
+    getMetaFromNode: (node, context, parse) => {
+      const matchingParser = parsers.find((parser) => parser.matches(node));
+      if (matchingParser) {
+        parse(node, matchingParser);
+      }
+    },
+  });
 
-// const TransitionTarget = new Parser({
-//   babelMatcher: t.isStringLiteral,
-//   getMetaFromNode: (node) => {
-//     return {
-//       machineMeta: {
-//         newTarget: {
-//           target: node.value,
-//           loc: node.loc,
-//         },
-//       },
-//       stateMeta: {
-//         newTarget: {
-//           target: node.value,
-//           loc: node.loc,
-//         },
-//       },
-//     };
-//   },
-// });
+const Identifier = new Parser({
+  babelMatcher: t.isIdentifier,
+  name: "Identifier",
+});
+
+const StringLiteral = (opts?: ParserOptionalProps<t.StringLiteral>) =>
+  new Parser({
+    ...opts,
+    babelMatcher: t.isStringLiteral,
+    name: "StringLiteral",
+  });
 
 export const MachineCallExpression = new Parser<t.CallExpression>({
   name: "MachineCallExpression",
@@ -83,7 +85,6 @@ export const MachineCallExpression = new Parser<t.CallExpression>({
 
     return ["Machine", "createMachine"].includes(calleeName);
   },
-
   getMetaFromNode: (node, context, parse) => {
     let calleeName = "";
 
@@ -105,23 +106,6 @@ export const MachineCallExpression = new Parser<t.CallExpression>({
     parse(node.arguments[0], StateNode());
   },
 });
-
-// const TransitionConfigObject = ObjectExpressionWithKnownKeys({
-//   target: {
-//     key: Identifier,
-//     value: TransitionTarget,
-//   },
-// });
-
-// const TransitionConfigOrTarget = UnionType([
-//   TransitionTarget,
-//   TransitionConfigObject,
-// ]);
-
-// const TransitionConfigOrArray = UnionType(
-//   TransitionConfigOrTarget,
-//   ArrayOf(TransitionConfigOrTarget),
-// );
 
 const ObjectExpressionWithKnownKeys = (
   object: Record<string, Parser<any>>,
@@ -146,7 +130,7 @@ const ObjectExpressionWithKnownKeys = (
   });
 
 const ObjectExpressionWithUnknownKeys = (
-  getParser: () => Parser<any>,
+  getParser: (key: string) => Parser<any>,
   opts?: ParserOptionalProps<t.ObjectExpression>,
 ) =>
   new Parser({
@@ -157,7 +141,7 @@ const ObjectExpressionWithUnknownKeys = (
       node.properties.forEach((property) => {
         if (t.isObjectProperty(property)) {
           if (t.isIdentifier(property.key)) {
-            parse(property.value, getParser());
+            parse(property.value, getParser(property.key.name));
           }
         }
       });
@@ -170,14 +154,66 @@ const StateNode = () =>
     initial: StateNodeInitial,
     states: StateNodeStates,
     type: StateNodeType,
-    // on: {
-    //   key: Identifier,
-    //   value: ObjectExpressionWithUnknownKeys({
-    //     key: Identifier,
-    //     value: TransitionConfigOrArray,
-    //   }),
-    // },
+    invoke: Invoke,
+    on: TransitionsMap,
   });
+
+const TransitionTarget = (key: string) =>
+  StringLiteral({
+    getMetaFromNode: (node, context) => {
+      context.updateCurrentState((state) => {
+        state.transitions[key].targets.push({
+          target: node.value,
+        });
+      });
+    },
+  });
+
+const TransitionConfig = (key: string) =>
+  ObjectExpressionWithKnownKeys({
+    target: TransitionTarget(key),
+  });
+
+const ArrayOf = (parser: Parser<any>) =>
+  new Parser({
+    babelMatcher: t.isArrayExpression,
+    name: "ArrayOf",
+    getChildren: (parse, node) => {
+      node.elements.forEach((element) => {
+        parse(node, parser);
+      });
+    },
+  });
+
+const TransitionConfigOrTarget = (key: string) =>
+  UnionType([TransitionTarget(key), TransitionConfig(key)]);
+
+const TransitionConfigOrArray = (key: string) =>
+  UnionType([
+    TransitionConfigOrTarget(key),
+    ArrayOf(TransitionConfigOrTarget(key)),
+  ]);
+
+const TransitionsMap = ObjectExpressionWithUnknownKeys(
+  (key) => TransitionConfigOrArray(key),
+  {
+    getMetaFromNode: (node, context) => {
+      node.properties.forEach((property) => {
+        if (t.isObjectProperty(property)) {
+          context.updateCurrentState((state) => {
+            if (t.isIdentifier(property.key)) {
+              state.transitions[property.key.name] = {
+                keyLoc: property.key.loc,
+                valueLoc: property.value.loc,
+                targets: [],
+              };
+            }
+          });
+        }
+      });
+    },
+  },
+);
 
 const StateNodeStates = new Parser({
   babelMatcher: t.isObjectExpression,
@@ -198,3 +234,115 @@ const StateNodeStates = new Parser({
     });
   },
 });
+
+const InvokeSrc = new Parser({
+  name: "InvokeSrc",
+  babelMatcher: t.isStringLiteral,
+  getMetaFromNode: (node, ctx) => {
+    ctx.updateCurrentState((state) => {
+      state.invokes[state.invokes.length - 1].src = {
+        value: node.value,
+        loc: node.loc,
+      };
+    });
+  },
+});
+
+const InvokeId = new Parser({
+  name: "InvokeId",
+  babelMatcher: t.isStringLiteral,
+  getMetaFromNode: (node, ctx) => {
+    ctx.updateCurrentState((state) => {
+      state.invokes[state.invokes.length - 1].id = {
+        value: node.value,
+        loc: node.loc,
+      };
+    });
+  },
+});
+
+const InvokeConfig = ObjectExpressionWithKnownKeys(
+  {
+    src: InvokeSrc,
+    id: InvokeId,
+  },
+  {
+    getMetaFromNode: (node, ctx) => {
+      ctx.updateCurrentState((state) => {
+        state.invokes.push({
+          loc: node.loc,
+        });
+      });
+    },
+  },
+);
+
+const Invoke = UnionType([InvokeConfig]);
+
+interface SimpleParser<T extends t.Node> {
+  parse: (node: T) => void;
+  matches: (node: T) => boolean;
+}
+
+const simpleParser =
+  <Props, T extends t.Node>(params: {
+    babelMatcher: (node: any) => node is T;
+    parseNode: (node: T, props: Props) => void;
+  }) =>
+  (props: Props): SimpleParser<T> => {
+    const matches = (node: T) => {
+      return params.babelMatcher(node);
+    };
+    const parse = (node: T) => {
+      if (!matches(node)) return;
+      params.parseNode(node, props);
+    };
+    return {
+      parse,
+      matches,
+    };
+  };
+
+const ActionAsIdentifier = simpleParser({
+  babelMatcher: t.isIdentifier,
+  parseNode: (
+    node,
+    props: {
+      onActionFound: (value: string, loc: Location) => void;
+    },
+  ) => {
+    props.onActionFound(node.name, node.loc);
+  },
+});
+
+const ActionAsString = simpleParser({
+  babelMatcher: t.isStringLiteral,
+  parseNode: (
+    node,
+    props: {
+      onActionFound: (value: string, loc: Location) => void;
+    },
+  ) => {
+    props.onActionFound(node.value, node.loc);
+  },
+});
+
+const unionType =
+  <Props>(parsers: ((props: Props) => SimpleParser<any>)[]) =>
+  (props: Props): SimpleParser<any> => {
+    const parsersWithProps = parsers.map((parser) => parser(props));
+    const matches = (node: any) => {
+      return parsersWithProps.some((parser) => parser.matches(node));
+    };
+    const parse = (node: any) => {
+      const parser = parsersWithProps.find((parser) => parser.matches(node));
+      parser?.parse(node);
+    };
+
+    return {
+      matches,
+      parse,
+    };
+  };
+
+const Action = unionType([ActionAsIdentifier, ActionAsString]);

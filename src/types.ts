@@ -4,34 +4,55 @@ import { MachineConfig } from "xstate";
 import { ParseContext } from "./ParseContext";
 import { Parser } from "./Parser";
 
+export type Location = t.SourceLocation | null;
+
 export interface MachineMeta extends StateMeta {
   callee?: {
     name: string;
-    loc: t.SourceLocation | null;
+    loc: Location;
   };
 }
 
 export interface StateMeta {
   id?: {
     value: string;
-    loc: t.SourceLocation | null;
+    loc: Location;
   };
   key?: string;
   keyNode?: {
-    loc: t.SourceLocation | null;
+    loc: Location;
   };
   valueNode?: {
-    loc: t.SourceLocation | null;
+    loc: Location;
   };
   initial?: {
     value: string;
-    loc: t.SourceLocation | null;
+    loc: Location;
   };
   states: Record<string, StateMeta>;
   type?: {
     value: string;
-    loc: t.SourceLocation | null;
+    loc: Location;
   };
+  invokes: {
+    loc: Location;
+    src?: {
+      loc: Location;
+      value: string;
+    };
+    id?: {
+      loc: Location;
+      value: string;
+    };
+  }[];
+  transitions: Record<
+    string,
+    {
+      keyLoc: Location;
+      valueLoc: Location;
+      targets: { target: string }[];
+    }
+  >;
 }
 
 export type GetMetaFromNode<T extends t.Node> = (

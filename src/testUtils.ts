@@ -20,7 +20,7 @@ const withoutContext = <T extends { context?: any }>(
     ...config,
   };
 
-  delete newConfig.context;
+  newConfig.context = undefined;
 
   return newConfig;
 };
