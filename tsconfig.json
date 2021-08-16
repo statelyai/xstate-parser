@@ -9,6 +9,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strictNullChecks": true,
+    "strict": true,
     "downlevelIteration": true,
     "experimentalDecorators": true,
     "skipLibCheck": true,

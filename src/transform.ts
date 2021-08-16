@@ -33,6 +33,7 @@ export interface MachineParseResultState {
   initial: MachineParseResultTarget | undefined;
   targets: MachineParseResultTarget[];
   node: t.ObjectExpression;
+  keyLocation: Location | undefined;
 }
 
 export interface MachineParseResultTarget {
@@ -86,7 +87,7 @@ export const parseMachinesFromFile = (
         const machineConfig = path.node.arguments[0];
 
         if (t.isObjectExpression(machineConfig)) {
-          const result = parseStateNode(machineConfig, []);
+          const result = parseStateNode(machineConfig, [], undefined);
           machines.push({
             config: result.config,
             node: machineConfig,
@@ -104,7 +105,7 @@ export const parseMachinesFromFile = (
           if (!t.isObjectExpression(variableDeclarator.init)) {
             throw new Error("Machine config must be an object expression");
           }
-          const result = parseStateNode(variableDeclarator.init, []);
+          const result = parseStateNode(variableDeclarator.init, [], undefined);
 
           machines.push({
             node: variableDeclarator.init,
@@ -141,6 +142,7 @@ export const findVariableDeclaratorWithName = (
 export const parseStateNode = (
   object: t.ObjectExpression,
   path: string[],
+  key: t.Expression | undefined,
 ): {
   config: StateNodeConfig<any, any, any>;
   statesMeta: MachineParseResultState[];
@@ -176,6 +178,7 @@ export const parseStateNode = (
     targets,
     initial: initialMeta,
     node: object,
+    keyLocation: key ? getLocationFromNode(key) : undefined,
   };
 
   return { config: stateNode, statesMeta: [thisNodeMeta, ...childStatesMeta] };
@@ -788,7 +791,11 @@ const getStatesObject = (
       }
 
       if (t.isObjectExpression(property.value)) {
-        const result = parseStateNode(property.value, [...path, stateName]);
+        const result = parseStateNode(
+          property.value,
+          [...path, stateName],
+          property.key,
+        );
         states[stateName] = result.config;
         statesMeta.push(...result.statesMeta);
       }
