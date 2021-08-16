@@ -43,7 +43,6 @@ export const arrayOf = (parser: Parser<any>) => {
     babelMatcher: t.isArrayExpression,
     parseNode: (node) => {
       const toReturn: ParserReturnType = [];
-      console.log(node.elements);
       node.elements.map((elem) => {
         toReturn.push(...(parser.parse(elem) || []));
       });
@@ -153,6 +152,14 @@ export const stateNodeMetaToConfig = (
   if (definition.exitActions) {
     config.exit = definition.exitActions.actions.map((action) => {
       return action.name;
+    });
+  }
+
+  if (definition.states) {
+    config.states = {};
+
+    definition.states.nodes.forEach((node) => {
+      (config.states as any)[node.key] = stateNodeMetaToConfig(node.node);
     });
   }
 

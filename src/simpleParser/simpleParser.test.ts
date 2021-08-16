@@ -44,7 +44,10 @@ describe("parseTypes", () => {
 
   test("it should handle nested states correctly", () => {
     const result = testParser(`createMachine({ states: {
-      a: {},
+      a: {
+        initial: 'wow',
+        id: 'a',
+      },
       b: {
         states: {
           b1: {},
@@ -53,6 +56,8 @@ describe("parseTypes", () => {
       },
       c: {}
     } })`);
+
+    console.log(JSON.stringify(result, null, 2));
 
     // expect(Object.keys(result[1].meta.states)).toEqual(["a", "b", "c"]);
     // expect(Object.keys(result[1].meta.states.b.states)).toEqual(["b1", "b2"]);
@@ -78,8 +83,6 @@ describe("parseTypes", () => {
 
     })`,
     );
-
-    console.log(JSON.stringify(result, null, 2));
 
     // expect(Object.keys(result[1].meta.states)).toEqual(["a", "b", "c"]);
     // expect(Object.keys(result[1].meta.states.b.states)).toEqual(["b1", "b2"]);

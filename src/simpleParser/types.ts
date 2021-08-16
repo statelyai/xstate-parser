@@ -83,7 +83,13 @@ export type ParserReturnTypeObject =
   | {
       type: "STATES";
       loc: Location;
-      nodes: StateNodeEvent[];
+      nodes: EventFromType<"CHILD_STATE">[];
+    }
+  | {
+      type: "CHILD_STATE";
+      key: string;
+      keyLoc: Location;
+      node: StateNodeEvent;
     };
 
 export type StateNodeEvent = {
@@ -91,7 +97,7 @@ export type StateNodeEvent = {
   loc: Location;
   entryActions?: EventFromType<"ENTRY_ACTIONS">;
   exitActions?: EventFromType<"EXIT_ACTIONS">;
-  states: StateNodeEvent[];
+  states?: EventFromType<"STATES">;
   id?: EventFromType<"ID">;
   initial?: EventFromType<"INITIAL">;
   on?: EventFromType<"ON_DECLARATION">;

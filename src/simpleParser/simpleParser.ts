@@ -205,6 +205,33 @@ const AlwaysDeclaration = wrapParserResult(TransitionArray, (events, node) => {
   ];
 });
 
+const StatesDeclaration: Parser = wrapParserResult(
+  objectTypeWithUnknownKeys,
+  (events, node) => {
+    const keys = eventUtils.filter("KEY_OF_OBJECT", events);
+
+    return [
+      {
+        type: "STATES",
+        loc: node.loc,
+        nodes: keys.map((key) => {
+          const stateNode = eventUtils.find(
+            "STATE_NODE",
+            StateNode.parse(key.valueNode),
+          );
+
+          return {
+            type: "CHILD_STATE",
+            key: key.key,
+            keyLoc: key.keyNode.loc,
+            node: stateNode,
+          };
+        }),
+      },
+    ];
+  },
+);
+
 const StateNode = wrapParserResult(
   objectTypeWithKnownKeys({
     id: StateNodeId,
@@ -215,6 +242,7 @@ const StateNode = wrapParserResult(
     exit: ArrayOfActions("EXIT_ACTIONS"),
     on: OnDeclaration,
     always: AlwaysDeclaration,
+    states: StatesDeclaration,
   }),
   (events, node) => {
     return [
@@ -223,7 +251,7 @@ const StateNode = wrapParserResult(
         loc: node.loc,
         entryActions: eventUtils.find("ENTRY_ACTIONS", events),
         exitActions: eventUtils.find("EXIT_ACTIONS", events),
-        states: eventUtils.filter("STATE_NODE", events),
+        states: eventUtils.find("STATES", events),
         id: eventUtils.find("ID", events),
         initial: eventUtils.find("INITIAL", events),
         on: eventUtils.find("ON_DECLARATION", events),
