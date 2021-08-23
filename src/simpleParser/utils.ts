@@ -177,6 +177,7 @@ export const objectTypeWithKnownKeys = <
         if (!parser) return;
 
         const result = parser.parse(property.node.value, context);
+
         // @ts-ignore
         toReturn[key] = result;
       });

@@ -662,7 +662,6 @@ export const getAction = (action: {} | null): Action<any, any> => {
     return function actions() {};
   }
 
-  console.log(action);
   throw new Error(
     "Action must be string literal, known XState action or function/arrow function expression",
   );

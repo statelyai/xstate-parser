@@ -40,8 +40,8 @@ const paginationMachine = createMachine<
         cond: "newTotalPagesIsValidValue",
         actions: choose([
           {
-            cond: "currentPageIsAboveNewTotalPages",
             actions: ["assignTotalPagesToContext", "goToFirstPage"],
+            cond: "currentPageIsAboveNewTotalPages",
           },
           {
             actions: "assignTotalPagesToContext",
