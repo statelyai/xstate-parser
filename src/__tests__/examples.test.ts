@@ -29,7 +29,7 @@ describe("Examples", () => {
            */
           const sourceMachineConfig = testUtils.withoutContext(machine.config);
 
-          const machineConfigUnderTest = machines[index].config;
+          const machineConfigUnderTest = machines[index].toConfig();
 
           expect(machineConfigUnderTest).toEqual(sourceMachineConfig);
           // expect(machineConfigUnderTest.transitions).toEqual(

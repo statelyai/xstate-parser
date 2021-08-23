@@ -1,6 +1,6 @@
 import * as t from "@babel/types";
 import { MachineConfig } from "xstate";
-import { TMachineCallExpression } from "./machineCallExpression";
+import { MachineParseResult } from "./MachineParseResult";
 
 export type Location = t.SourceLocation | null;
 
@@ -24,8 +24,5 @@ export interface AnyParser<Result> {
 }
 
 export interface ParseResult {
-  machines: {
-    config: MachineConfig<any, any, any> | undefined;
-    ast: TMachineCallExpression;
-  }[];
+  machines: MachineParseResult[];
 }

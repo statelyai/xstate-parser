@@ -2,6 +2,7 @@ import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
 import { MachineConfig } from "xstate";
 import { MachineCallExpression } from "./machineCallExpression";
+import { MachineParseResult } from "./MachineParseResult";
 import { toMachineConfig } from "./toMachineConfig";
 import { ParseResult } from "./types";
 
@@ -30,10 +31,7 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
         file: parseResult,
       });
       if (ast) {
-        result.machines.push({
-          ast: ast,
-          config: toMachineConfig(ast),
-        });
+        result.machines.push(new MachineParseResult({ ast }));
       }
     },
   });
