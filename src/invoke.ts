@@ -3,36 +3,54 @@ import { BooleanLiteral } from "./scalars";
 import { MaybeTransitionArray } from "./transitions";
 import {
   createParser,
+  isFunctionOrArrowFunctionExpression,
   maybeArrayOf,
   objectTypeWithKnownKeys,
   unionType,
 } from "./utils";
 
+interface InvokeNode {
+  node: t.Node;
+  value: string | (() => void);
+}
+
 const InvokeIdStringLiteral = createParser({
   babelMatcher: t.isStringLiteral,
-  parseNode: (node) => ({
-    loc: node.loc,
+  parseNode: (node): InvokeNode => ({
+    node,
     value: node.value,
   }),
 });
 
 const InvokeSrcStringLiteral = createParser({
   babelMatcher: t.isStringLiteral,
-  parseNode: (node) => ({
-    loc: node.loc,
+  parseNode: (node): InvokeNode => ({
+    node,
     value: node.value,
+  }),
+});
+
+const InvokeSrcFunctionExpression = createParser({
+  babelMatcher: isFunctionOrArrowFunctionExpression,
+  parseNode: (node): InvokeNode => ({
+    value: function src() {},
+    node,
   }),
 });
 
 const InvokeSrcNode = createParser({
   babelMatcher: t.isNode,
-  parseNode: (node) => ({
+  parseNode: (node): InvokeNode => ({
     value: "anonymous",
-    loc: node.loc,
+    node,
   }),
 });
 
-const InvokeSrc = unionType([InvokeSrcStringLiteral, InvokeSrcNode]);
+const InvokeSrc = unionType([
+  InvokeSrcStringLiteral,
+  InvokeSrcFunctionExpression,
+  InvokeSrcNode,
+]);
 
 const InvokeConfigObject = objectTypeWithKnownKeys({
   id: InvokeIdStringLiteral,

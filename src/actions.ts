@@ -18,6 +18,7 @@ import {
 export interface ActionNode {
   node: t.Node;
   action: Action<any, any>;
+  name: string;
 }
 
 export const ActionAsIdentifier = createParser({
@@ -26,6 +27,7 @@ export const ActionAsIdentifier = createParser({
     return {
       action: node.name,
       node,
+      name: node.name,
     };
   },
 });
@@ -36,6 +38,7 @@ export const ActionAsFunctionExpression = createParser({
     return {
       node,
       action: function actions() {},
+      name: "",
     };
   },
 });
@@ -46,6 +49,7 @@ export const ActionAsString = createParser({
     return {
       action: node.value,
       node,
+      name: node.value,
     };
   },
 });
@@ -56,6 +60,7 @@ export const ActionAsNode = createParser({
     return {
       action: "anonymous",
       node,
+      name: "",
     };
   },
 });
@@ -97,6 +102,7 @@ export const ChooseAction = wrapParserResult(
     return {
       node: node,
       action: choose(conditions),
+      name: "",
     };
   },
 );
@@ -107,6 +113,7 @@ export const AssignAction = wrapParserResult(
     return {
       node: result.node,
       action: assign(() => {}),
+      name: "",
     };
   },
 );
@@ -125,6 +132,7 @@ export const SendAction = wrapParserResult(
   (result): ActionNode => {
     return {
       node: result.node,
+      name: "",
       action: send(
         () => {
           return {
@@ -147,6 +155,7 @@ export const ForwardToAction = wrapParserResult(
     return {
       node: result.node,
       action: forwardTo(result.argument1Result?.value || ""),
+      name: "",
     };
   },
 );

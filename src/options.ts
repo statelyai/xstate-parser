@@ -1,9 +1,19 @@
 import { AnyNode, BooleanLiteral } from "./scalars";
-import { objectOf, objectTypeWithKnownKeys } from "./utils";
+import {
+  identifierReferencingVariableDeclaration,
+  objectOf,
+  objectTypeWithKnownKeys,
+  unionType,
+} from "./utils";
 
-export const MachineOptions = objectTypeWithKnownKeys({
+const MachineOptionsObject = objectTypeWithKnownKeys({
   actions: objectOf(AnyNode),
   services: objectOf(AnyNode),
   guards: objectOf(AnyNode),
   devTools: BooleanLiteral,
 });
+
+export const MachineOptions = unionType([
+  MachineOptionsObject,
+  identifierReferencingVariableDeclaration(MachineOptionsObject),
+]);

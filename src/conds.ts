@@ -8,6 +8,7 @@ import {
 
 export interface CondNode {
   node: t.Node;
+  name: string;
   cond: Condition<any, any>;
 }
 
@@ -16,6 +17,7 @@ const CondAsFunctionExpression = createParser({
   parseNode: (node): CondNode => {
     return {
       node,
+      name: "",
       cond: () => {
         return false;
       },
@@ -28,6 +30,7 @@ const CondAsStringLiteral = createParser({
   parseNode: (node): CondNode => {
     return {
       node,
+      name: node.value,
       cond: node.value,
     };
   },
@@ -38,6 +41,7 @@ const CondAsNode = createParser({
   parseNode: (node): CondNode => {
     return {
       node,
+      name: "",
       cond: "anonymous",
     };
   },
