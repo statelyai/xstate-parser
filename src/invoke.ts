@@ -11,12 +11,12 @@ import {
 
 interface InvokeNode {
   node: t.Node;
-  value: string | (() => void);
+  value: string | (() => Promise<void>);
 }
 
 const InvokeIdStringLiteral = createParser({
   babelMatcher: t.isStringLiteral,
-  parseNode: (node): InvokeNode => ({
+  parseNode: (node) => ({
     node,
     value: node.value,
   }),
@@ -33,7 +33,7 @@ const InvokeSrcStringLiteral = createParser({
 const InvokeSrcFunctionExpression = createParser({
   babelMatcher: isFunctionOrArrowFunctionExpression,
   parseNode: (node): InvokeNode => ({
-    value: function src() {},
+    value: async function src() {},
     node,
   }),
 });

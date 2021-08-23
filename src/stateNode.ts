@@ -1,4 +1,5 @@
 import { MaybeArrayOfActions } from "./actions";
+import * as t from "@babel/types";
 import { History } from "./history";
 import { Invoke } from "./invoke";
 import { StringLiteral } from "./scalars";
@@ -45,6 +46,7 @@ export type StateNodeReturn = {
   history?: GetParserResult<typeof History>;
   tags?: GetParserResult<typeof Tags>;
   states?: GetParserResult<AnyParser<ObjectOfReturn<StateNodeReturn>>>;
+  node: t.Node;
 };
 
 const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
