@@ -23,17 +23,22 @@ describe("Examples", () => {
 
       exampleMachines.forEach((machine, index) => {
         try {
+          /**
+           * We don't care about comparing the configs,
+           * so adding this here
+           */
           const sourceMachineConfig = testUtils.withoutContext(
             machine.toJSON(),
           );
+
           const machineConfigUnderTest = createMachine(
-            parsedMachines[index].config,
+            parsedMachines[index],
           ).toJSON();
 
-          // expect(sourceMachineConfig).toEqual(machineConfigUnderTest);
-          expect(machineConfigUnderTest.transitions).toEqual(
-            sourceMachineConfig.transitions,
-          );
+          expect(machineConfigUnderTest).toEqual(sourceMachineConfig);
+          // expect(machineConfigUnderTest.transitions).toEqual(
+          //   sourceMachineConfig.transitions,
+          // );
         } catch (e) {
           if (!e.message.includes("Received: serializes to the same string")) {
             throw e;

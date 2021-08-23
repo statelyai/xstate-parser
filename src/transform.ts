@@ -17,9 +17,9 @@ import {
   TransitionConfigOrTarget,
   TransitionsConfig,
 } from "xstate";
-import { ParseContext } from "./ParseContext";
-import { MachineCallExpression } from "./parseTypes";
-import { ParseResult } from "./types";
+import { MachineCallExpression } from "./simpleParser/simpleParser";
+import { ParserReturnType } from "./simpleParser/types";
+import { eventsToMachineConfigs } from "./simpleParser/utils";
 
 export interface MachineParseResult {
   config: MachineConfig<any, any, any>;
@@ -55,12 +55,14 @@ export interface LineAndCharLocation {
   column: number;
 }
 
-export const parseMachinesFromFile = (fileContents: string): ParseResult => {
+export const parseMachinesFromFile = (
+  fileContents: string,
+): MachineConfig<any, any, any>[] => {
   if (
     !fileContents.includes("createMachine") &&
     !fileContents.includes("Machine")
   ) {
-    return {};
+    return [];
   }
 
   const parseResult = parser.parse(fileContents, {
@@ -68,60 +70,15 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
     plugins: ["typescript", "jsx"],
   });
 
-  const context = new ParseContext();
+  let returnType: ParserReturnType = [];
 
   traverse(parseResult as any, {
-    CallExpression(path) {
-      MachineCallExpression.parse(path.node as any, context);
-      // const callee = path.node.callee;
-
-      // let calleeName = "";
-
-      // if (t.isIdentifier(callee)) {
-      //   calleeName = callee.name;
-      // } else if (t.isMemberExpression(callee)) {
-      //   if (t.isIdentifier(callee.property)) {
-      //     calleeName = callee.property.name;
-      //   }
-      // }
-
-      // if (["Machine", "createMachine"].includes(calleeName)) {
-      //   const machineConfig = path.node.arguments[0];
-
-      //   if (t.isObjectExpression(machineConfig)) {
-      //     const result = parseStateNode(machineConfig, [], undefined);
-      //     machines.push({
-      //       config: result.config,
-      //       node: machineConfig,
-      //       statesMeta: result.statesMeta,
-      //     });
-      //   } else if (t.isIdentifier(machineConfig)) {
-      //     const variableDeclarator = findVariableDeclaratorWithName(
-      //       parseResult,
-      //       machineConfig.name,
-      //     );
-
-      //     if (!variableDeclarator) {
-      //       throw new Error("Could not find machine config in this file");
-      //     }
-      //     if (!t.isObjectExpression(variableDeclarator.init)) {
-      //       throw new Error("Machine config must be an object expression");
-      //     }
-      //     const result = parseStateNode(variableDeclarator.init, [], undefined);
-
-      //     machines.push({
-      //       node: variableDeclarator.init,
-      //       config: result.config,
-      //       statesMeta: result.statesMeta,
-      //     });
-      //   } else {
-      //     throw new Error("Machine config must be an object expression");
-      //   }
-      // }
+    CallExpression(path: any) {
+      returnType.push(...(MachineCallExpression.parse(path.node) || []));
     },
   });
 
-  return context.getResult();
+  return eventsToMachineConfigs(returnType as any);
 };
 
 export const findVariableDeclaratorWithName = (

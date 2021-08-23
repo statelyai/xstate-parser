@@ -6,6 +6,7 @@ import {
   eventUtils,
   objectTypeWithKnownKeys,
   objectTypeWithUnknownKeys,
+  unionType,
   wrapParserResult,
 } from "./utils";
 
@@ -47,21 +48,6 @@ const ActionAsNode = createParser({
     ];
   },
 });
-
-const unionType = (parsers: Parser<any>[]) => {
-  const matches = (node: any) => {
-    return parsers.some((parser) => parser.matches(node));
-  };
-  const parse = (node: any) => {
-    const parser = parsers.find((parser) => parser.matches(node));
-    return parser?.parse(node);
-  };
-
-  return {
-    matches,
-    parse,
-  };
-};
 
 const Action = unionType([ActionAsString, ActionAsIdentifier, ActionAsNode]);
 
@@ -195,6 +181,95 @@ const OnDeclaration = wrapParserResult(
   },
 );
 
+const InvokeIdStringLiteral = createParser({
+  babelMatcher: t.isStringLiteral,
+  parseNode: (node) => {
+    return [
+      {
+        type: "INVOKE_ID",
+        loc: node.loc,
+        value: node.value,
+      },
+    ];
+  },
+});
+
+const InvokeSrcStringLiteral = createParser({
+  babelMatcher: t.isStringLiteral,
+  parseNode: (node) => {
+    return [
+      {
+        type: "INVOKE_SRC",
+        loc: node.loc,
+        value: node.value,
+      },
+    ];
+  },
+});
+
+const InvokeSrcNode = createParser({
+  babelMatcher: t.isNode,
+  parseNode: (node) => {
+    return [
+      {
+        type: "INVOKE_SRC",
+        value: "anonymous",
+        loc: node.loc,
+      },
+    ];
+  },
+});
+
+const InvokeConfigObject = wrapParserResult(
+  objectTypeWithKnownKeys({
+    id: InvokeIdStringLiteral,
+    src: unionType([InvokeSrcStringLiteral, InvokeSrcNode]),
+    onDone: wrapParserResult(TransitionArray, (events, node) => {
+      return [
+        {
+          type: "INVOKE_ON_DONE",
+          loc: node.loc,
+          transitions: eventUtils.filter("TRANSITION_TARGET", events),
+        },
+      ];
+    }),
+    onError: wrapParserResult(TransitionArray, (events, node) => {
+      return [
+        {
+          type: "INVOKE_ON_ERROR",
+          loc: node.loc,
+          transitions: eventUtils.filter("TRANSITION_TARGET", events),
+        },
+      ];
+    }),
+  }),
+  (events, node) => {
+    return [
+      {
+        type: "INVOKE",
+        id: eventUtils.find("INVOKE_ID", events),
+        src: eventUtils.find("INVOKE_SRC", events),
+        loc: node.loc,
+        onDone: eventUtils.find("INVOKE_ON_DONE", events),
+        onError: eventUtils.find("INVOKE_ON_ERROR", events),
+      },
+    ];
+  },
+);
+
+const Invoke = wrapParserResult(
+  unionType([arrayOf(InvokeConfigObject), InvokeConfigObject]),
+  (events, node) => {
+    return [
+      {
+        type: "INVOKE_ARRAY",
+        loc: node.loc,
+        services: eventUtils.filter("INVOKE", events),
+      },
+    ];
+  },
+);
+
 const AlwaysDeclaration = wrapParserResult(TransitionArray, (events, node) => {
   return [
     {
@@ -243,6 +318,7 @@ const StateNode = wrapParserResult(
     on: OnDeclaration,
     always: AlwaysDeclaration,
     states: StatesDeclaration,
+    invoke: Invoke,
   }),
   (events, node) => {
     return [
@@ -255,6 +331,7 @@ const StateNode = wrapParserResult(
         id: eventUtils.find("ID", events),
         initial: eventUtils.find("INITIAL", events),
         on: eventUtils.find("ON_DECLARATION", events),
+        invoke: eventUtils.find("INVOKE_ARRAY", events),
       },
     ];
   },

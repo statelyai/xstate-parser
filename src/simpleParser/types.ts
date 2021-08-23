@@ -24,6 +24,39 @@ export type ParserReturnTypeObject =
       keyNode: t.Identifier;
       valueNode: t.Node;
     }
+  | {
+      type: "INVOKE_SRC";
+      value: string;
+      loc: Location;
+    }
+  | {
+      type: "INVOKE_ID";
+      value: string;
+      loc: Location;
+    }
+  | {
+      type: "INVOKE";
+      src?: EventFromType<"INVOKE_SRC">;
+      id?: EventFromType<"INVOKE_ID">;
+      onDone?: EventFromType<"INVOKE_ON_DONE">;
+      onError?: EventFromType<"INVOKE_ON_ERROR">;
+      loc: Location;
+    }
+  | {
+      type: "INVOKE_ON_DONE";
+      loc: Location;
+      transitions: EventFromType<"TRANSITION_TARGET">[];
+    }
+  | {
+      type: "INVOKE_ON_ERROR";
+      loc: Location;
+      transitions: EventFromType<"TRANSITION_TARGET">[];
+    }
+  | {
+      type: "INVOKE_ARRAY";
+      loc: Location;
+      services: EventFromType<"INVOKE">[];
+    }
   | ActionEvent
   | {
       type: "ENTRY_ACTIONS";
@@ -101,6 +134,8 @@ export type StateNodeEvent = {
   id?: EventFromType<"ID">;
   initial?: EventFromType<"INITIAL">;
   on?: EventFromType<"ON_DECLARATION">;
+  invoke?: EventFromType<"INVOKE_ARRAY">;
+  always?: EventFromType<"ALWAYS_DECLARATION">;
 };
 
 export type ActionEvent = {

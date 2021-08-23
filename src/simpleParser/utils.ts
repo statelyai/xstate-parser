@@ -7,6 +7,21 @@ import {
   StateNodeEvent,
 } from "./types";
 
+export const unionType = (parsers: Parser<any>[]) => {
+  const matches = (node: any) => {
+    return parsers.some((parser) => parser.matches(node));
+  };
+  const parse = (node: any) => {
+    const parser = parsers.find((parser) => parser.matches(node));
+    return parser?.parse(node);
+  };
+
+  return {
+    matches,
+    parse,
+  };
+};
+
 export const wrapParserResult = <T extends t.Node>(
   parser: Parser,
   changeResult: (result: ParserReturnType, node: T) => ParserReturnType,
@@ -139,6 +154,18 @@ export const stateNodeMetaToConfig = (
     config.id = definition.id.value;
   }
 
+  if (definition.always) {
+    config.always = definition.always.transitions.map(
+      ({ target, cond, actions }) => {
+        return {
+          target: target?.target,
+          cond: cond?.name,
+          actions: actions?.actions?.map((action) => action.name),
+        };
+      },
+    );
+  }
+
   if (definition.initial) {
     config.initial = definition.initial.value;
   }
@@ -160,6 +187,31 @@ export const stateNodeMetaToConfig = (
 
     definition.states.nodes.forEach((node) => {
       (config.states as any)[node.key] = stateNodeMetaToConfig(node.node);
+    });
+  }
+
+  if (definition.invoke) {
+    config.invoke = definition.invoke.services.map((service) => {
+      return {
+        src: service.src?.value!,
+        id: service.id?.value,
+        onDone: service.onDone?.transitions.map(({ target, cond, actions }) => {
+          return {
+            target: target?.target,
+            cond: cond?.name,
+            actions: actions?.actions?.map((action) => action.name),
+          };
+        }),
+        onError: service.onError?.transitions.map(
+          ({ target, cond, actions }) => {
+            return {
+              target: target?.target,
+              cond: cond?.name,
+              actions: actions?.actions?.map((action) => action.name),
+            };
+          },
+        ),
+      };
     });
   }
 
