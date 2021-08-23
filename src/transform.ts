@@ -17,9 +17,11 @@ import {
   TransitionConfigOrTarget,
   TransitionsConfig,
 } from "xstate";
-import { MachineCallExpression } from "./simpleParser/simpleParser";
-import { ParserReturnType } from "./simpleParser/types";
-import { eventsToMachineConfigs } from "./simpleParser/utils";
+import {
+  MachineCallExpression,
+  TMachineCallExpression,
+} from "./simpleParser/simpleParser";
+import { toMachineConfig } from "./simpleParser/toMachineConfig";
 
 export interface MachineParseResult {
   config: MachineConfig<any, any, any>;
@@ -70,15 +72,18 @@ export const parseMachinesFromFile = (
     plugins: ["typescript", "jsx"],
   });
 
-  let returnType: ParserReturnType = [];
+  let toReturn: MachineConfig<any, any, any>[] = [];
 
   traverse(parseResult as any, {
     CallExpression(path: any) {
-      returnType.push(...(MachineCallExpression.parse(path.node) || []));
+      const config = toMachineConfig(MachineCallExpression.parse(path.node));
+      if (config) {
+        toReturn.push(config);
+      }
     },
   });
 
-  return eventsToMachineConfigs(returnType as any);
+  return toReturn;
 };
 
 export const findVariableDeclaratorWithName = (

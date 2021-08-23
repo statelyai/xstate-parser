@@ -1,17 +1,13 @@
 import * as t from "@babel/types";
-import { MachineConfig, StateNode, StateNodeConfig } from "xstate";
-import {
-  Parser,
-  ParserReturnType,
-  ParserReturnTypeObject,
-  StateNodeEvent,
-} from "./types";
+import { AnyParser, Parser } from "./types";
 
-export const unionType = (parsers: Parser<any>[]) => {
+export const unionType = <Result>(
+  parsers: AnyParser<Result>[],
+): AnyParser<Result> => {
   const matches = (node: any) => {
     return parsers.some((parser) => parser.matches(node));
   };
-  const parse = (node: any) => {
+  const parse = (node: any): Result | undefined => {
     const parser = parsers.find((parser) => parser.matches(node));
     return parser?.parse(node);
   };
@@ -22,28 +18,28 @@ export const unionType = (parsers: Parser<any>[]) => {
   };
 };
 
-export const wrapParserResult = <T extends t.Node>(
-  parser: Parser,
-  changeResult: (result: ParserReturnType, node: T) => ParserReturnType,
-): Parser => {
+export const wrapParserResult = <T extends t.Node, Result, NewResult>(
+  parser: AnyParser<Result>,
+  changeResult: (result: Result, node: T) => NewResult,
+): AnyParser<NewResult> => {
   return {
     matches: parser.matches,
-    parse: (node: T) => {
+    parse: (node: any) => {
       const result = parser.parse(node);
-      if (!result) return result;
+      if (!result) return undefined;
       return changeResult(result, node);
     },
   };
 };
 
-export const createParser = <T extends t.Node>(params: {
+export const createParser = <T extends t.Node, Result>(params: {
   babelMatcher: (node: any) => node is T;
-  parseNode: (node: T) => ParserReturnType | undefined;
-}): Parser<T> => {
+  parseNode: (node: T) => Result;
+}): Parser<T, Result> => {
   const matches = (node: T) => {
     return params.babelMatcher(node);
   };
-  const parse = (node: T): ParserReturnType | undefined => {
+  const parse = (node: any): Result | undefined => {
     if (!matches(node)) return undefined;
     return params.parseNode(node);
   };
@@ -53,13 +49,21 @@ export const createParser = <T extends t.Node>(params: {
   };
 };
 
-export const arrayOf = (parser: Parser<any>) => {
+export const maybeArrayOf = <Result>(
+  parser: AnyParser<Result> | AnyParser<Result[]>,
+): AnyParser<Result[]> => {
   return createParser({
     babelMatcher: t.isArrayExpression,
     parseNode: (node) => {
-      const toReturn: ParserReturnType = [];
+      const toReturn: Result[] = [];
+
       node.elements.map((elem) => {
-        toReturn.push(...(parser.parse(elem) || []));
+        const result = parser.parse(elem);
+        if (result && Array.isArray(result)) {
+          toReturn.push(...result);
+        } else if (result) {
+          toReturn.push(result);
+        }
       });
 
       return toReturn;
@@ -67,169 +71,114 @@ export const arrayOf = (parser: Parser<any>) => {
   });
 };
 
-export const objectTypeWithUnknownKeys = createParser({
-  babelMatcher: t.isObjectExpression,
-  parseNode: (node) => {
-    const toReturn: ParserReturnType = [];
-    node.properties.forEach((property) => {
-      if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
-        toReturn.push({
-          type: "KEY_OF_OBJECT",
-          key: property.key.name,
-          keyNode: property.key,
-          valueNode: property.value,
-        });
-      }
-    });
-    return toReturn;
-  },
-});
+export const arrayOf = <Result>(
+  parser: AnyParser<Result>,
+): AnyParser<Result[]> => {
+  return createParser({
+    babelMatcher: t.isArrayExpression,
+    parseNode: (node) => {
+      const toReturn: Result[] = [];
 
-export const objectTypeWithKnownKeys = (obj: Record<string, Parser<any>>) =>
-  createParser({
+      node.elements.map((elem) => {
+        const result = parser.parse(elem);
+        if (result) {
+          toReturn.push(result);
+        }
+      });
+
+      return toReturn;
+    },
+  });
+};
+
+export const getPropertiesOfObjectExpression = (node: t.ObjectExpression) => {
+  const propertiesToReturn: (Omit<t.ObjectProperty, "key"> & {
+    key: t.Identifier;
+  })[] = [];
+
+  node.properties.forEach((property) => {
+    if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
+      propertiesToReturn.push(property as any);
+    }
+  });
+
+  return propertiesToReturn;
+};
+
+export type GetObjectKeysResult<
+  T extends { [index: string]: AnyParser<unknown> },
+> = {
+  [K in keyof T]?: ReturnType<T[K]["parse"]>;
+} & {
+  node: t.ObjectExpression;
+};
+
+export type GetParserResult<TParser extends AnyParser<any>> = ReturnType<
+  TParser["parse"]
+>;
+
+export const objectTypeWithKnownKeys = <
+  T extends { [index: string]: AnyParser<any> },
+>(
+  parserObject: T | (() => T),
+) =>
+  createParser<t.ObjectExpression, GetObjectKeysResult<T>>({
     babelMatcher: t.isObjectExpression,
     parseNode: (node) => {
-      const keys = objectTypeWithUnknownKeys.parse(node);
+      const properties = getPropertiesOfObjectExpression(node);
+      const parseObject =
+        typeof parserObject === "function" ? parserObject() : parserObject;
 
-      const toReturn: ParserReturnType = [];
+      const toReturn = {
+        node,
+      };
 
-      keys?.forEach((keyResult) => {
-        if (keyResult.type !== "KEY_OF_OBJECT") return;
-
-        const parser = obj[keyResult.key];
+      properties?.forEach((property) => {
+        const key = property.key.name;
+        const parser = parseObject[key];
 
         if (!parser) return;
 
-        const result = parser.parse(keyResult.valueNode);
-        toReturn.push(...(result || []));
+        const result = parser.parse(property.value);
+        // @ts-ignore
+        toReturn[key] = result;
+      });
+
+      return toReturn as GetObjectKeysResult<T>;
+    },
+  });
+
+export interface ObjectOfReturn<Result> {
+  node: t.Node;
+  properties: { keyNode: t.Identifier; key: string; result: Result }[];
+}
+
+export const objectOf = <Result>(
+  parser: AnyParser<Result>,
+): AnyParser<ObjectOfReturn<Result>> => {
+  return createParser({
+    babelMatcher: t.isObjectExpression,
+    parseNode: (node) => {
+      const properties = getPropertiesOfObjectExpression(node);
+
+      const toReturn = {
+        node,
+        properties: [],
+      } as ObjectOfReturn<Result>;
+
+      properties.forEach((property) => {
+        const result = parser.parse(property.value);
+
+        if (result) {
+          toReturn.properties.push({
+            key: property.key.name,
+            keyNode: property.key,
+            result,
+          });
+        }
       });
 
       return toReturn;
     },
   });
-
-const filterByEventType = <Type extends ParserReturnTypeObject["type"]>(
-  type: Type,
-  array: ParserReturnType | undefined,
-): Extract<ParserReturnTypeObject, { type: Type }>[] => {
-  return (array || []).filter((e) => e.type === type) as any;
-};
-
-const getFirstEventOfType = <Type extends ParserReturnTypeObject["type"]>(
-  type: Type,
-  array: ParserReturnType | undefined,
-): Extract<ParserReturnTypeObject, { type: Type }> => {
-  return filterByEventType(type, array)[0];
-};
-
-const some = <Type extends ParserReturnTypeObject["type"]>(
-  type: Type,
-  array: ParserReturnType | undefined,
-): boolean => {
-  return Boolean(filterByEventType(type, array)[0]);
-};
-
-export const eventUtils = {
-  find: getFirstEventOfType,
-  filter: filterByEventType,
-  some,
-};
-
-export const eventsToMachineConfigs = (
-  events: ParserReturnType,
-): StateNodeConfig<any, any, any>[] => {
-  const machineCallees = eventUtils.filter("MACHINE_CALLEE", events);
-
-  return machineCallees.map(({ definition }) => {
-    return stateNodeMetaToConfig(definition);
-  });
-};
-
-export const stateNodeMetaToConfig = (
-  definition: StateNodeEvent,
-): StateNodeConfig<any, any, any> => {
-  const config: StateNodeConfig<any, any, any> = {};
-
-  if (definition.id) {
-    config.id = definition.id.value;
-  }
-
-  if (definition.always) {
-    config.always = definition.always.transitions.map(
-      ({ target, cond, actions }) => {
-        return {
-          target: target?.target,
-          cond: cond?.name,
-          actions: actions?.actions?.map((action) => action.name),
-        };
-      },
-    );
-  }
-
-  if (definition.initial) {
-    config.initial = definition.initial.value;
-  }
-
-  if (definition.entryActions) {
-    config.entry = definition.entryActions.actions.map((action) => {
-      return action.name;
-    });
-  }
-
-  if (definition.exitActions) {
-    config.exit = definition.exitActions.actions.map((action) => {
-      return action.name;
-    });
-  }
-
-  if (definition.states) {
-    config.states = {};
-
-    definition.states.nodes.forEach((node) => {
-      (config.states as any)[node.key] = stateNodeMetaToConfig(node.node);
-    });
-  }
-
-  if (definition.invoke) {
-    config.invoke = definition.invoke.services.map((service) => {
-      return {
-        src: service.src?.value!,
-        id: service.id?.value,
-        onDone: service.onDone?.transitions.map(({ target, cond, actions }) => {
-          return {
-            target: target?.target,
-            cond: cond?.name,
-            actions: actions?.actions?.map((action) => action.name),
-          };
-        }),
-        onError: service.onError?.transitions.map(
-          ({ target, cond, actions }) => {
-            return {
-              target: target?.target,
-              cond: cond?.name,
-              actions: actions?.actions?.map((action) => action.name),
-            };
-          },
-        ),
-      };
-    });
-  }
-
-  if (definition.on) {
-    config.on = {};
-
-    definition.on.transitions.forEach((transition) => {
-      (config.on as any)[transition.event] = transition.transitions.map(
-        ({ target, cond, actions }) => {
-          return {
-            target: target?.target,
-            cond: cond?.name,
-            actions: actions?.actions?.map((action) => action.name),
-          };
-        },
-      );
-    });
-  }
-
-  return config;
 };

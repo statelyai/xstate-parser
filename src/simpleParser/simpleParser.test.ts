@@ -1,21 +1,21 @@
 import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
-import { MachineCallExpression } from "./simpleParser";
-import { eventsToMachineConfigs } from "./utils";
+import { MachineCallExpression, TMachineCallExpression } from "./simpleParser";
+import { toMachineConfig } from "./toMachineConfig";
 
 const testParser = (fileContents: string) => {
   const parseResult = parser.parse(fileContents, {
     sourceType: "module",
     plugins: ["typescript", "jsx"],
   });
-  let result: any;
+  let result: TMachineCallExpression;
   traverse(parseResult as any, {
     CallExpression(path: any) {
       result = MachineCallExpression.parse(path.node);
     },
   });
 
-  return eventsToMachineConfigs(result);
+  return toMachineConfig(result);
 };
 
 describe("parseTypes", () => {
@@ -57,8 +57,6 @@ describe("parseTypes", () => {
       c: {}
     } })`);
 
-    console.log(JSON.stringify(result, null, 2));
-
     // expect(Object.keys(result[1].meta.states)).toEqual(["a", "b", "c"]);
     // expect(Object.keys(result[1].meta.states.b.states)).toEqual(["b1", "b2"]);
   });
@@ -83,6 +81,7 @@ describe("parseTypes", () => {
 
     })`,
     );
+    console.log(JSON.stringify(result, null, 2));
 
     // expect(Object.keys(result[1].meta.states)).toEqual(["a", "b", "c"]);
     // expect(Object.keys(result[1].meta.states.b.states)).toEqual(["b1", "b2"]);
