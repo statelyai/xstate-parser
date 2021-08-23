@@ -1,5 +1,6 @@
+import traverse from "@babel/traverse";
 import * as t from "@babel/types";
-import { AnyParser, Parser } from "./types";
+import { AnyParser, Parser, ParserContext } from "./types";
 
 export const unionType = <Result>(
   parsers: AnyParser<Result>[],
@@ -7,9 +8,9 @@ export const unionType = <Result>(
   const matches = (node: any) => {
     return parsers.some((parser) => parser.matches(node));
   };
-  const parse = (node: any): Result | undefined => {
+  const parse = (node: any, context: ParserContext): Result | undefined => {
     const parser = parsers.find((parser) => parser.matches(node));
-    return parser?.parse(node);
+    return parser?.parse(node, context);
   };
 
   return {
@@ -24,8 +25,8 @@ export const wrapParserResult = <T extends t.Node, Result, NewResult>(
 ): AnyParser<NewResult> => {
   return {
     matches: parser.matches,
-    parse: (node: any) => {
-      const result = parser.parse(node);
+    parse: (node: any, context) => {
+      const result = parser.parse(node, context);
       if (!result) return undefined;
       return changeResult(result, node);
     },
@@ -34,14 +35,14 @@ export const wrapParserResult = <T extends t.Node, Result, NewResult>(
 
 export const createParser = <T extends t.Node, Result>(params: {
   babelMatcher: (node: any) => node is T;
-  parseNode: (node: T) => Result;
+  parseNode: (node: T, context: ParserContext) => Result;
 }): Parser<T, Result> => {
   const matches = (node: T) => {
     return params.babelMatcher(node);
   };
-  const parse = (node: any): Result | undefined => {
+  const parse = (node: any, context: ParserContext): Result | undefined => {
     if (!matches(node)) return undefined;
-    return params.parseNode(node);
+    return params.parseNode(node, context);
   };
   return {
     parse,
@@ -54,11 +55,11 @@ export const maybeArrayOf = <Result>(
 ): AnyParser<Result[]> => {
   const arrayParser = createParser({
     babelMatcher: t.isArrayExpression,
-    parseNode: (node) => {
+    parseNode: (node, context) => {
       const toReturn: Result[] = [];
 
       node.elements.map((elem) => {
-        const result = parser.parse(elem);
+        const result = parser.parse(elem, context);
         if (result && Array.isArray(result)) {
           toReturn.push(...result);
         } else if (result) {
@@ -88,11 +89,11 @@ export const arrayOf = <Result>(
 ): AnyParser<Result[]> => {
   return createParser({
     babelMatcher: t.isArrayExpression,
-    parseNode: (node) => {
+    parseNode: (node, context) => {
       const toReturn: Result[] = [];
 
       node.elements.map((elem) => {
-        const result = parser.parse(elem);
+        const result = parser.parse(elem, context);
         if (result) {
           toReturn.push(result);
         }
@@ -160,7 +161,7 @@ export const objectTypeWithKnownKeys = <
 ) =>
   createParser<t.ObjectExpression, GetObjectKeysResult<T>>({
     babelMatcher: t.isObjectExpression,
-    parseNode: (node) => {
+    parseNode: (node, context) => {
       const properties = getPropertiesOfObjectExpression(node);
       const parseObject =
         typeof parserObject === "function" ? parserObject() : parserObject;
@@ -175,7 +176,7 @@ export const objectTypeWithKnownKeys = <
 
         if (!parser) return;
 
-        const result = parser.parse(property.node.value);
+        const result = parser.parse(property.node.value, context);
         // @ts-ignore
         toReturn[key] = result;
       });
@@ -193,12 +194,28 @@ export interface ObjectOfReturn<Result> {
   }[];
 }
 
+export const identifierReferencingVariableDeclaration = <Result>(
+  parser: AnyParser<Result>,
+) => {
+  return createParser({
+    babelMatcher: t.isIdentifier,
+    parseNode: (node, context) => {
+      const variableDeclarator = findVariableDeclaratorWithName(
+        context.file,
+        node.name,
+      );
+
+      return parser.parse(variableDeclarator?.init, context);
+    },
+  });
+};
+
 export const objectOf = <Result>(
   parser: AnyParser<Result>,
 ): AnyParser<ObjectOfReturn<Result>> => {
   return createParser({
     babelMatcher: t.isObjectExpression,
-    parseNode: (node) => {
+    parseNode: (node, context) => {
       const properties = getPropertiesOfObjectExpression(node);
 
       const toReturn = {
@@ -207,7 +224,7 @@ export const objectOf = <Result>(
       } as ObjectOfReturn<Result>;
 
       properties.forEach((property) => {
-        const result = parser.parse(property.node.value);
+        const result = parser.parse(property.node.value, context);
 
         if (result) {
           toReturn.properties.push({
@@ -221,4 +238,21 @@ export const objectOf = <Result>(
       return toReturn;
     },
   });
+};
+
+export const findVariableDeclaratorWithName = (
+  file: any,
+  name: string,
+): t.VariableDeclarator | null | undefined => {
+  let declarator: t.VariableDeclarator | null | undefined = null;
+
+  traverse(file, {
+    VariableDeclarator(path) {
+      if (t.isIdentifier(path.node.id) && path.node.id.name === name) {
+        declarator = path.node as any;
+      }
+    },
+  });
+
+  return declarator;
 };

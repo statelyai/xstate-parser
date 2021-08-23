@@ -8,7 +8,7 @@ export type TMachineCallExpression = GetParserResult<
 
 export const MachineCallExpression = createParser({
   babelMatcher: t.isCallExpression,
-  parseNode: (node) => {
+  parseNode: (node, context) => {
     if (
       t.isMemberExpression(node.callee) &&
       t.isIdentifier(node.callee.property) &&
@@ -17,7 +17,7 @@ export const MachineCallExpression = createParser({
       return {
         callee: node.callee,
         calleeName: node.callee.property.name,
-        definition: StateNode.parse(node.arguments[0]),
+        definition: StateNode.parse(node.arguments[0], context),
       };
     }
 
@@ -28,7 +28,7 @@ export const MachineCallExpression = createParser({
       return {
         callee: node.callee,
         calleeName: node.callee.name,
-        definition: StateNode.parse(node.arguments[0]),
+        definition: StateNode.parse(node.arguments[0], context),
       };
     }
   },

@@ -6,10 +6,12 @@ import { MaybeTransitionArray } from "./transitions";
 import { AnyParser } from "./types";
 import {
   GetParserResult,
+  identifierReferencingVariableDeclaration,
   maybeArrayOf,
   objectOf,
   ObjectOfReturn,
   objectTypeWithKnownKeys,
+  unionType,
 } from "./utils";
 
 const On = objectOf(MaybeTransitionArray);
@@ -45,7 +47,7 @@ export type StateNodeReturn = {
   states?: GetParserResult<AnyParser<ObjectOfReturn<StateNodeReturn>>>;
 };
 
-export const StateNode: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
+const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
   () => ({
     id: StringLiteral,
     initial: StringLiteral,
@@ -62,6 +64,11 @@ export const StateNode: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     after: After,
     on: On,
     tags: Tags,
-    states: objectOf(StateNode),
+    states: objectOf(StateNodeObject),
   }),
 );
+
+const IdentifierToStateNode =
+  identifierReferencingVariableDeclaration(StateNodeObject);
+
+export const StateNode = unionType([StateNodeObject, IdentifierToStateNode]);

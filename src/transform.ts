@@ -76,7 +76,11 @@ export const parseMachinesFromFile = (
 
   traverse(parseResult as any, {
     CallExpression(path: any) {
-      const config = toMachineConfig(MachineCallExpression.parse(path.node));
+      const config = toMachineConfig(
+        MachineCallExpression.parse(path.node, {
+          file: parseResult,
+        }),
+      );
       if (config) {
         toReturn.push(config);
       }
@@ -84,23 +88,6 @@ export const parseMachinesFromFile = (
   });
 
   return toReturn;
-};
-
-export const findVariableDeclaratorWithName = (
-  file: any,
-  name: string,
-): t.VariableDeclarator | null | undefined => {
-  let declarator: t.VariableDeclarator | null | undefined = null;
-
-  traverse(file, {
-    VariableDeclarator(path) {
-      if (t.isIdentifier(path.node.id) && path.node.id.name === name) {
-        declarator = path.node as any;
-      }
-    },
-  });
-
-  return declarator;
 };
 
 export const parseStateNode = (
