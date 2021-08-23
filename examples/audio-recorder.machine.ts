@@ -45,7 +45,7 @@ const audioRecorderMachine = createMachine<
     context: {
       mediaChunks: [],
     },
-    exit: ["removeMediaStream"],
+    exit: "removeMediaStream",
     states: {
       idle: {
         on: {

@@ -35,7 +35,7 @@ const confirmationDialogMachine = createMachine<
         },
       },
       open: {
-        exit: ["clearErrorMessage"],
+        exit: "clearErrorMessage",
         initial: "idle",
         states: {
           idle: {

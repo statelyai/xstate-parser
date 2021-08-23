@@ -43,18 +43,16 @@ const multiStepFormMachine = createMachine<
       enteringBeneficiary: {
         initial: "idle",
         id: "enteringBeneficiary",
-        onDone: [
-          {
-            target: "enteringDate",
-          },
-        ],
+        onDone: {
+          target: "enteringDate",
+        },
         states: {
           idle: {
-            exit: ["clearErrorMessage"],
+            exit: "clearErrorMessage",
             on: {
               CONFIRM_BENEFICIARY: {
                 target: "submitting",
-                actions: ["assignBeneficiaryInfoToContext"],
+                actions: "assignBeneficiaryInfoToContext",
               },
             },
           },
@@ -81,11 +79,11 @@ const multiStepFormMachine = createMachine<
         initial: "idle",
         states: {
           idle: {
-            exit: ["clearErrorMessage"],
+            exit: "clearErrorMessage",
             on: {
               CONFIRM_DATE: {
                 target: "submitting",
-                actions: ["assignDateToContext"],
+                actions: "assignDateToContext",
               },
               BACK: {
                 target: "#enteringBeneficiary",
@@ -114,9 +112,9 @@ const multiStepFormMachine = createMachine<
         initial: "idle",
         states: {
           idle: {
-            exit: ["clearErrorMessage"],
+            exit: "clearErrorMessage",
             on: {
-              CONFIRM: "submitting",
+              CONFIRM: { target: "submitting" },
               BACK: {
                 target: "#enteringDate",
               },

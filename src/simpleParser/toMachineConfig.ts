@@ -23,11 +23,38 @@ const parseStateNode = (
     config.initial = astResult.initial.value;
   }
 
+  if (astResult?.type) {
+    config.type = astResult.type.value as any;
+  }
+
+  if (astResult.entry) {
+    config.entry = getActionConfig(astResult.entry);
+  }
+  if (astResult.onEntry) {
+    config.onEntry = getActionConfig(astResult.onEntry);
+  }
+  if (astResult.exit) {
+    config.exit = getActionConfig(astResult.exit);
+  }
+  if (astResult.onExit) {
+    config.onExit = getActionConfig(astResult.onExit);
+  }
+
   if (astResult.on) {
     config.on = {};
 
     astResult.on.properties.forEach((onProperty) => {
       (config.on as any)[onProperty.key] = getTransitions(onProperty.result);
+    });
+  }
+
+  if (astResult.after) {
+    config.after = {};
+
+    astResult.after.properties.forEach((afterProperty) => {
+      (config.after as any)[afterProperty.key] = getTransitions(
+        afterProperty.result,
+      );
     });
   }
 
@@ -43,6 +70,58 @@ const parseStateNode = (
     });
 
     config.states = states;
+  }
+
+  if (astResult.always) {
+    config.always = getTransitions(astResult.always);
+  }
+
+  if (astResult.onDone) {
+    // @ts-ignore
+    config.onDone = getTransitions(astResult.onDone);
+  }
+
+  if (astResult.invoke) {
+    const invokes: typeof config.invoke = [];
+
+    astResult.invoke.forEach((invoke) => {
+      const toPush: typeof invokes[number] = {
+        src: "anonymous",
+      };
+      if (invoke.src) {
+        toPush.src = invoke.src.value;
+      }
+
+      if (invoke.id) {
+        toPush.id = invoke.id.value;
+      }
+
+      if (invoke.autoForward) {
+        toPush.autoForward = invoke.autoForward.value;
+      }
+
+      if (invoke.forward) {
+        toPush.forward = invoke.forward.value;
+      }
+
+      if (invoke.onDone) {
+        // @ts-ignore
+        toPush.onDone = getTransitions(invoke.onDone);
+      }
+
+      if (invoke.onError) {
+        // @ts-ignore
+        toPush.onError = getTransitions(invoke.onError);
+      }
+
+      invokes.push(toPush);
+    });
+
+    if (invokes.length === 1) {
+      config.invoke = invokes[0];
+    } else {
+      config.invoke = invokes;
+    }
   }
 
   return config;
@@ -63,6 +142,10 @@ export const getActionConfig = (
   astActions?.forEach((action) => {
     actions.push(action.name);
   });
+
+  if (actions.length === 1) {
+    return actions[0];
+  }
 
   return actions;
 };
@@ -86,6 +169,10 @@ export const getTransitions = (
 
     transitions.push(toPush);
   });
+
+  if (transitions.length === 1) {
+    return transitions[0];
+  }
 
   return transitions;
 };

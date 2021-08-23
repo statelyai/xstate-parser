@@ -27,13 +27,9 @@ describe("Examples", () => {
            * We don't care about comparing the configs,
            * so adding this here
            */
-          const sourceMachineConfig = testUtils.withoutContext(
-            machine.toJSON(),
-          );
+          const sourceMachineConfig = testUtils.withoutContext(machine.config);
 
-          const machineConfigUnderTest = createMachine(
-            parsedMachines[index],
-          ).toJSON();
+          const machineConfigUnderTest = parsedMachines[index];
 
           expect(machineConfigUnderTest).toEqual(sourceMachineConfig);
           // expect(machineConfigUnderTest.transitions).toEqual(

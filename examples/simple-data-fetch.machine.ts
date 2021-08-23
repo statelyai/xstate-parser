@@ -43,7 +43,7 @@ const simpleDataFetchMachine = createMachine<
         initial: "noError",
         states: {
           noError: {
-            entry: ["clearErrorMessage"],
+            entry: "clearErrorMessage",
           },
           errored: {},
         },

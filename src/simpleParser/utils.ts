@@ -52,7 +52,7 @@ export const createParser = <T extends t.Node, Result>(params: {
 export const maybeArrayOf = <Result>(
   parser: AnyParser<Result> | AnyParser<Result[]>,
 ): AnyParser<Result[]> => {
-  return createParser({
+  const arrayParser = createParser({
     babelMatcher: t.isArrayExpression,
     parseNode: (node) => {
       const toReturn: Result[] = [];
@@ -69,6 +69,18 @@ export const maybeArrayOf = <Result>(
       return toReturn;
     },
   });
+
+  const otherParser = wrapParserResult<t.Node, Result | Result[], Result[]>(
+    parser,
+    (res) => {
+      if (Array.isArray(res)) {
+        return res;
+      }
+      return [res];
+    },
+  );
+
+  return unionType([arrayParser, otherParser]);
 };
 
 export const arrayOf = <Result>(
@@ -92,13 +104,37 @@ export const arrayOf = <Result>(
 };
 
 export const getPropertiesOfObjectExpression = (node: t.ObjectExpression) => {
-  const propertiesToReturn: (Omit<t.ObjectProperty, "key"> & {
-    key: t.Identifier;
-  })[] = [];
+  const propertiesToReturn: {
+    node: t.ObjectProperty;
+    key: string;
+    keyNode: t.Identifier | t.StringLiteral | t.NumericLiteral;
+  }[] = [];
 
   node.properties.forEach((property) => {
     if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
-      propertiesToReturn.push(property as any);
+      propertiesToReturn.push({
+        node: property,
+        key: property.key.name,
+        keyNode: property.key,
+      });
+    } else if (
+      t.isObjectProperty(property) &&
+      t.isStringLiteral(property.key)
+    ) {
+      propertiesToReturn.push({
+        node: property,
+        key: property.key.value,
+        keyNode: property.key,
+      });
+    } else if (
+      t.isObjectProperty(property) &&
+      t.isNumericLiteral(property.key)
+    ) {
+      propertiesToReturn.push({
+        node: property,
+        key: `${property.key.value}`,
+        keyNode: property.key,
+      });
     }
   });
 
@@ -110,7 +146,7 @@ export type GetObjectKeysResult<
 > = {
   [K in keyof T]?: ReturnType<T[K]["parse"]>;
 } & {
-  node: t.ObjectExpression;
+  node: t.Node;
 };
 
 export type GetParserResult<TParser extends AnyParser<any>> = ReturnType<
@@ -134,12 +170,12 @@ export const objectTypeWithKnownKeys = <
       };
 
       properties?.forEach((property) => {
-        const key = property.key.name;
+        const key = property.key;
         const parser = parseObject[key];
 
         if (!parser) return;
 
-        const result = parser.parse(property.value);
+        const result = parser.parse(property.node.value);
         // @ts-ignore
         toReturn[key] = result;
       });
@@ -150,7 +186,11 @@ export const objectTypeWithKnownKeys = <
 
 export interface ObjectOfReturn<Result> {
   node: t.Node;
-  properties: { keyNode: t.Identifier; key: string; result: Result }[];
+  properties: {
+    keyNode: t.Identifier | t.StringLiteral | t.NumericLiteral;
+    key: string;
+    result: Result;
+  }[];
 }
 
 export const objectOf = <Result>(
@@ -167,12 +207,12 @@ export const objectOf = <Result>(
       } as ObjectOfReturn<Result>;
 
       properties.forEach((property) => {
-        const result = parser.parse(property.value);
+        const result = parser.parse(property.node.value);
 
         if (result) {
           toReturn.properties.push({
-            key: property.key.name,
-            keyNode: property.key,
+            key: property.key,
+            keyNode: property.keyNode,
             result,
           });
         }
