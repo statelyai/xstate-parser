@@ -2,6 +2,11 @@ import traverse from "@babel/traverse";
 import * as t from "@babel/types";
 import { AnyParser, Parser, ParserContext } from "./types";
 
+/**
+ * Used to declare when a type can be either one
+ * thing or another. Each parser added must
+ * return the same result
+ */
 export const unionType = <Result>(
   parsers: AnyParser<Result>[],
 ): AnyParser<Result> => {
@@ -19,6 +24,10 @@ export const unionType = <Result>(
   };
 };
 
+/**
+ * Allows you to wrap a parser and reformulate
+ * the result at the end of it
+ */
 export const wrapParserResult = <T extends t.Node, Result, NewResult>(
   parser: AnyParser<Result>,
   changeResult: (result: Result, node: T) => NewResult,
@@ -33,6 +42,10 @@ export const wrapParserResult = <T extends t.Node, Result, NewResult>(
   };
 };
 
+/**
+ * Creates a parser, which can be run later on AST nodes
+ * to work out if they match
+ */
 export const createParser = <T extends t.Node, Result>(params: {
   babelMatcher: (node: any) => node is T;
   parseNode: (node: T, context: ParserContext) => Result;
@@ -50,6 +63,10 @@ export const createParser = <T extends t.Node, Result>(params: {
   };
 };
 
+/**
+ * Useful for when something might, or might not,
+ * be declared as an array
+ */
 export const maybeArrayOf = <Result>(
   parser: AnyParser<Result> | AnyParser<Result[]>,
 ): AnyParser<Result[]> => {
@@ -84,6 +101,10 @@ export const maybeArrayOf = <Result>(
   return unionType([arrayParser, otherParser]);
 };
 
+/**
+ * Used to declare that this node is declared
+ * an array of something
+ */
 export const arrayOf = <Result>(
   parser: AnyParser<Result>,
 ): AnyParser<Result[]> => {
@@ -104,6 +125,10 @@ export const arrayOf = <Result>(
   });
 };
 
+/**
+ * Utility function for grabbing the properties of
+ * an object expression
+ */
 export const getPropertiesOfObjectExpression = (node: t.ObjectExpression) => {
   const propertiesToReturn: {
     node: t.ObjectProperty;
@@ -154,6 +179,10 @@ export type GetParserResult<TParser extends AnyParser<any>> = ReturnType<
   TParser["parse"]
 >;
 
+/**
+ * Used for declaring an object expression where the known keys
+ * can be different things
+ */
 export const objectTypeWithKnownKeys = <
   T extends { [index: string]: AnyParser<any> },
 >(
@@ -195,6 +224,10 @@ export interface ObjectOfReturn<Result> {
   }[];
 }
 
+/**
+ * Used for when you expect an identifier to be used
+ * which references a variable declaration of a certain type
+ */
 export const identifierReferencingVariableDeclaration = <Result>(
   parser: AnyParser<Result>,
 ) => {
@@ -211,6 +244,11 @@ export const identifierReferencingVariableDeclaration = <Result>(
   });
 };
 
+/**
+ * Used when you have a keyed object where all the
+ * values are the same type, for instance `states` or
+ * `on`
+ */
 export const objectOf = <Result>(
   parser: AnyParser<Result>,
 ): AnyParser<ObjectOfReturn<Result>> => {
@@ -241,6 +279,10 @@ export const objectOf = <Result>(
   });
 };
 
+/**
+ * Finds a declarator in the same file which corresponds
+ * to an identifier of the name you provide
+ */
 export const findVariableDeclaratorWithName = (
   file: any,
   name: string,
@@ -258,6 +300,10 @@ export const findVariableDeclaratorWithName = (
   return declarator;
 };
 
+/**
+ * Returns a parser for a named function and allows you to
+ * parse its arguments
+ */
 export const namedFunctionCall = <Argument1Result, Argument2Result>(
   name: string,
   argument1Parser: AnyParser<Argument1Result>,
