@@ -64,7 +64,7 @@ const createOrUpdateFormMachine = createMachine<
       failedToFetch: {
         exit: "clearErrorMessage",
         on: {
-          RETRY: "fetchingItemToEdit",
+          RETRY: { target: "fetchingItemToEdit" },
         },
       },
       awaitingSubmit: {
@@ -73,7 +73,7 @@ const createOrUpdateFormMachine = createMachine<
         on: {
           SUBMIT: {
             target: "submitting",
-            actions: ["assignItemToContext"],
+            actions: "assignItemToContext",
           },
         },
       },

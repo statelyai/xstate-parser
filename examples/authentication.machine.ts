@@ -44,7 +44,7 @@ const authenticationMachine = createMachine<
             target: "loggedIn",
             actions: "assignUserDetailsToContext",
           },
-          REPORT_IS_LOGGED_OUT: "loggedOut",
+          REPORT_IS_LOGGED_OUT: { target: "loggedOut" },
         },
       },
       loggedIn: {

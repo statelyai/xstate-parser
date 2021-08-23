@@ -27,8 +27,8 @@ export const fetchMachine = Machine({
     },
     loading: {
       on: {
-        RESOLVE: "success",
-        REJECT: "failure",
+        RESOLVE: { target: "success" },
+        REJECT: { target: "failure" },
       },
     },
     success: {

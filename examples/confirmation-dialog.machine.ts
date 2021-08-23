@@ -40,8 +40,8 @@ const confirmationDialogMachine = createMachine<
         states: {
           idle: {
             on: {
-              CANCEL: "#closed",
-              CONFIRM: "executingAction",
+              CANCEL: { target: "#closed" },
+              CONFIRM: { target: "executingAction" },
             },
           },
           executingAction: {

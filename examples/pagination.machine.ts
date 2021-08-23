@@ -44,7 +44,7 @@ const paginationMachine = createMachine<
             actions: ["assignTotalPagesToContext", "goToFirstPage"],
           },
           {
-            actions: ["assignTotalPagesToContext"],
+            actions: "assignTotalPagesToContext",
           },
         ]),
         target: "idle",

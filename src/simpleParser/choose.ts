@@ -31,7 +31,7 @@ export const ChooseAction = wrapParserResult(
         actions: [],
       };
       if (arg1Result.actions) {
-        toPush.actions = getActionConfig(arg1Result.actions);
+        toPush.actions = arg1Result.actions.map((action) => action.action);
       }
       if (arg1Result.cond) {
         toPush.cond = arg1Result.cond.name;
