@@ -258,12 +258,14 @@ export const findVariableDeclaratorWithName = (
   return declarator;
 };
 
-export const namedFunctionCall = <Argument1Result>(
+export const namedFunctionCall = <Argument1Result, Argument2Result>(
   name: string,
   argument1Parser: AnyParser<Argument1Result>,
+  argument2Parser?: AnyParser<Argument2Result>,
 ): AnyParser<{
   node: t.CallExpression;
   argument1Result: Argument1Result | undefined;
+  argument2Result: Argument2Result | undefined;
 }> => {
   const namedFunctionParser = createParser({
     babelMatcher: t.isCallExpression,
@@ -288,7 +290,14 @@ export const namedFunctionCall = <Argument1Result>(
       return {
         node,
         argument1Result: argument1Parser.parse(node.arguments[0], context),
+        argument2Result: argument2Parser?.parse(node.arguments[1], context),
       };
     },
   };
+};
+
+export const isFunctionOrArrowFunctionExpression = (
+  node: any,
+): node is t.ArrowFunctionExpression | t.FunctionExpression => {
+  return t.isArrowFunctionExpression(node) || t.isFunctionExpression(node);
 };

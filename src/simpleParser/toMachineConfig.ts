@@ -161,7 +161,7 @@ export const getTransitions = (
       toPush.target = transition.target.value;
     }
     if (transition.cond) {
-      toPush.cond = transition.cond.name;
+      toPush.cond = transition.cond.cond;
     }
     if (transition.actions) {
       toPush.actions = getActionConfig(transition.actions);

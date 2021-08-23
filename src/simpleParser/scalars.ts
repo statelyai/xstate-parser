@@ -12,6 +12,16 @@ export const StringLiteral = createParser({
   },
 });
 
+export const NumericLiteral = createParser({
+  babelMatcher: t.isNumericLiteral,
+  parseNode: (node) => {
+    return {
+      value: node.value,
+      node,
+    };
+  },
+});
+
 export const BooleanLiteral = createParser({
   babelMatcher: t.isBooleanLiteral,
   parseNode: (node) => {
@@ -20,4 +30,9 @@ export const BooleanLiteral = createParser({
       node,
     };
   },
+});
+
+export const AnyNode = createParser({
+  babelMatcher: t.isNode,
+  parseNode: (node) => node,
 });

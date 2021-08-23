@@ -1,11 +1,13 @@
 import * as t from "@babel/types";
 import { Action, ChooseConditon } from "xstate";
-import { choose } from "xstate/lib/actions";
+import { assign, choose, forwardTo, send } from "xstate/lib/actions";
 
 import { Cond } from "./conds";
+import { AnyNode, NumericLiteral, StringLiteral } from "./scalars";
 import {
   arrayOf,
   createParser,
+  isFunctionOrArrowFunctionExpression,
   maybeArrayOf,
   namedFunctionCall,
   objectTypeWithKnownKeys,
@@ -24,6 +26,16 @@ export const ActionAsIdentifier = createParser({
     return {
       action: node.name,
       node,
+    };
+  },
+});
+
+export const ActionAsFunctionExpression = createParser({
+  babelMatcher: isFunctionOrArrowFunctionExpression,
+  parseNode: (node): ActionNode => {
+    return {
+      node,
+      action: function actions() {},
     };
   },
 });
@@ -77,7 +89,7 @@ export const ChooseAction = wrapParserResult(
         }
       }
       if (arg1Result.cond) {
-        toPush.cond = arg1Result.cond.name;
+        toPush.cond = arg1Result.cond.cond;
       }
       conditions.push(toPush);
     });
@@ -89,9 +101,65 @@ export const ChooseAction = wrapParserResult(
   },
 );
 
-const NamedAction = unionType([ChooseAction]);
+export const AssignAction = wrapParserResult(
+  namedFunctionCall("assign", AnyNode),
+  (result): ActionNode => {
+    return {
+      node: result.node,
+      action: assign(() => {}),
+    };
+  },
+);
+
+export const SendActionSecondArg = objectTypeWithKnownKeys({
+  to: StringLiteral,
+  delay: unionType<{ node: t.Node; value: string | number }>([
+    NumericLiteral,
+    StringLiteral,
+  ]),
+  id: StringLiteral,
+});
+
+export const SendAction = wrapParserResult(
+  namedFunctionCall("send", AnyNode, SendActionSecondArg),
+  (result): ActionNode => {
+    return {
+      node: result.node,
+      action: send(
+        () => {
+          return {
+            type: "UNDEFINED",
+          };
+        },
+        {
+          id: result.argument2Result?.id?.value,
+          to: result.argument2Result?.to?.value,
+          delay: result.argument2Result?.delay?.value,
+        },
+      ),
+    };
+  },
+);
+
+export const ForwardToAction = wrapParserResult(
+  namedFunctionCall("forwardTo", StringLiteral),
+  (result): ActionNode => {
+    return {
+      node: result.node,
+      action: forwardTo(result.argument1Result?.value || ""),
+    };
+  },
+);
+
+const NamedAction = unionType([
+  ChooseAction,
+  AssignAction,
+  SendAction,
+  ForwardToAction,
+]);
 
 const BasicAction = unionType([
+  ActionAsFunctionExpression,
   ActionAsString,
   ActionAsIdentifier,
   ActionAsNode,
