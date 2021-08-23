@@ -256,3 +256,38 @@ export const findVariableDeclaratorWithName = (
 
   return declarator;
 };
+
+export const namedFunctionCall = <Argument1Result>(
+  name: string,
+  argument1Parser: AnyParser<Argument1Result>,
+): AnyParser<{
+  node: t.CallExpression;
+  argument1Result: Argument1Result | undefined;
+}> => {
+  const namedFunctionParser = createParser({
+    babelMatcher: t.isCallExpression,
+    parseNode: (node) => {
+      return node;
+    },
+  });
+
+  return {
+    matches: (node: t.CallExpression) => {
+      if (!namedFunctionParser.matches(node)) {
+        return false;
+      }
+
+      if (!t.isIdentifier(node.callee)) {
+        return false;
+      }
+
+      return node.callee.name === name;
+    },
+    parse: (node: t.CallExpression, context) => {
+      return {
+        node,
+        argument1Result: argument1Parser.parse(node.arguments[0], context),
+      };
+    },
+  };
+};

@@ -140,7 +140,7 @@ export const getActionConfig = (
   const actions: Actions<any, any> = [];
 
   astActions?.forEach((action) => {
-    actions.push(action.name);
+    actions.push(action.action);
   });
 
   if (actions.length === 1) {

@@ -1,11 +1,18 @@
 import * as t from "@babel/types";
+import { Action } from "xstate";
+import { ChooseAction } from "./choose";
 import { createParser, maybeArrayOf, unionType } from "./utils";
+
+export interface ActionNode {
+  node: t.Node;
+  action: Action<any, any>;
+}
 
 const ActionAsIdentifier = createParser({
   babelMatcher: t.isIdentifier,
-  parseNode: (node) => {
+  parseNode: (node): ActionNode => {
     return {
-      name: node.name,
+      action: node.name,
       node,
     };
   },
@@ -13,9 +20,9 @@ const ActionAsIdentifier = createParser({
 
 const ActionAsString = createParser({
   babelMatcher: t.isStringLiteral,
-  parseNode: (node) => {
+  parseNode: (node): ActionNode => {
     return {
-      name: node.value,
+      action: node.value,
       node,
     };
   },
@@ -23,14 +30,24 @@ const ActionAsString = createParser({
 
 const ActionAsNode = createParser({
   babelMatcher: t.isNode,
-  parseNode: (node) => {
+  parseNode: (node): ActionNode => {
     return {
-      name: "anonymous",
+      action: "anonymous",
       node,
     };
   },
 });
 
-const Action = unionType([ActionAsString, ActionAsIdentifier, ActionAsNode]);
+const NamedAction = unionType([ChooseAction]);
 
-export const MaybeArrayOfActions = maybeArrayOf(Action);
+const BasicAction = unionType([
+  ActionAsString,
+  ActionAsIdentifier,
+  ActionAsNode,
+]);
+
+export const ArrayOfBasicActions = maybeArrayOf(BasicAction);
+
+export const MaybeArrayOfActions = maybeArrayOf(
+  unionType([NamedAction, BasicAction]),
+);
