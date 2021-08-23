@@ -11,3 +11,13 @@ export const StringLiteral = createParser({
     };
   },
 });
+
+export const BooleanLiteral = createParser({
+  babelMatcher: t.isBooleanLiteral,
+  parseNode: (node) => {
+    return {
+      value: node.value,
+      node,
+    };
+  },
+});

@@ -1,17 +1,21 @@
 import { MaybeArrayOfActions } from "./actions";
+import { History } from "./history";
 import { Invoke } from "./invoke";
 import { StringLiteral } from "./scalars";
 import { MaybeTransitionArray } from "./transitions";
 import { AnyParser } from "./types";
 import {
+  GetParserResult,
+  maybeArrayOf,
   objectOf,
   ObjectOfReturn,
   objectTypeWithKnownKeys,
-  GetObjectKeysResult,
-  GetParserResult,
 } from "./utils";
 
 const On = objectOf(MaybeTransitionArray);
+
+const After = objectOf(MaybeTransitionArray);
+const Tags = maybeArrayOf(StringLiteral);
 
 /**
  * This is frustrating, but we need to keep this
@@ -33,7 +37,11 @@ export type StateNodeReturn = {
   onExit?: GetParserResult<typeof MaybeArrayOfActions>;
   invoke?: GetParserResult<typeof Invoke>;
   always?: GetParserResult<typeof MaybeTransitionArray>;
+  onDone?: GetParserResult<typeof MaybeTransitionArray>;
   on?: GetParserResult<typeof On>;
+  after?: GetParserResult<typeof After>;
+  history?: GetParserResult<typeof History>;
+  tags?: GetParserResult<typeof Tags>;
   states?: GetParserResult<AnyParser<ObjectOfReturn<StateNodeReturn>>>;
 };
 
@@ -42,6 +50,7 @@ export const StateNode: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     id: StringLiteral,
     initial: StringLiteral,
     type: StringLiteral,
+    history: History,
     delimiter: StringLiteral,
     entry: MaybeArrayOfActions,
     exit: MaybeArrayOfActions,
@@ -49,7 +58,10 @@ export const StateNode: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     onExit: MaybeArrayOfActions,
     invoke: Invoke,
     always: MaybeTransitionArray,
-    on: objectOf(MaybeTransitionArray),
+    onDone: MaybeTransitionArray,
+    after: After,
+    on: On,
+    tags: Tags,
     states: objectOf(StateNode),
   }),
 );

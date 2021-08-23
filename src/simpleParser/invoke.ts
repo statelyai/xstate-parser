@@ -1,4 +1,6 @@
 import * as t from "@babel/types";
+import { BooleanLiteral } from "./scalars";
+import { MaybeTransitionArray } from "./transitions";
 import {
   createParser,
   maybeArrayOf,
@@ -35,6 +37,10 @@ const InvokeSrc = unionType([InvokeSrcStringLiteral, InvokeSrcNode]);
 const InvokeConfigObject = objectTypeWithKnownKeys({
   id: InvokeIdStringLiteral,
   src: InvokeSrc,
+  onDone: MaybeTransitionArray,
+  onError: MaybeTransitionArray,
+  autoForward: BooleanLiteral,
+  forward: BooleanLiteral,
 });
 
 export const Invoke = maybeArrayOf(InvokeConfigObject);
