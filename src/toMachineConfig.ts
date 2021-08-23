@@ -5,7 +5,7 @@ import {
   TransitionConfigOrTarget,
 } from "xstate";
 import { MaybeArrayOfActions } from "./actions";
-import { TMachineCallExpression } from "./simpleParser";
+import { TMachineCallExpression } from "./machineCallExpression";
 import { StateNodeReturn } from "./stateNode";
 import { MaybeTransitionArray } from "./transitions";
 import { GetParserResult } from "./utils";

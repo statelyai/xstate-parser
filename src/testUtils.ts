@@ -1,9 +1,8 @@
 import fs from "fs";
 import path from "path";
 import * as XStateParser from "./index";
-import { ParseResult } from "./types";
 
-const parseFileFromExamplesDir = (filename: string): ParseResult => {
+const parseFileFromExamplesDir = (filename: string) => {
   const asString = fs
     .readFileSync(path.resolve(__dirname, "../examples", filename))
     .toString();

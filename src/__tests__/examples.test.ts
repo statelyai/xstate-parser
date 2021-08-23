@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { createMachine, StateMachine } from "xstate";
 import { testUtils } from "../testUtils";
-import { parseMachinesFromFile } from "../transform";
+import { parseMachinesFromFile } from "../parseMachinesFromFile";
 
 const examples = fs.readdirSync(path.resolve(__dirname, "../../examples"));
 
@@ -19,7 +19,7 @@ describe("Examples", () => {
         .readFileSync(path.resolve(__dirname, "../../examples", example))
         .toString();
 
-      const parsedMachines = parseMachinesFromFile(fileAsString);
+      const { machines } = parseMachinesFromFile(fileAsString);
 
       exampleMachines.forEach((machine, index) => {
         try {
@@ -29,7 +29,7 @@ describe("Examples", () => {
            */
           const sourceMachineConfig = testUtils.withoutContext(machine.config);
 
-          const machineConfigUnderTest = parsedMachines[index];
+          const machineConfigUnderTest = machines[index].config;
 
           expect(machineConfigUnderTest).toEqual(sourceMachineConfig);
           // expect(machineConfigUnderTest.transitions).toEqual(
