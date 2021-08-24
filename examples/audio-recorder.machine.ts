@@ -45,7 +45,7 @@ const audioRecorderMachine = createMachine<
     context: {
       mediaChunks: [],
     },
-    exit: ["removeMediaStream"],
+    exit: "removeMediaStream",
     states: {
       idle: {
         on: {
@@ -68,7 +68,7 @@ const audioRecorderMachine = createMachine<
       },
       recordingFailed: {
         on: {
-          RETRY: "recording",
+          RETRY: { target: "recording" },
         },
       },
       recording: {
@@ -123,7 +123,7 @@ const audioRecorderMachine = createMachine<
       },
       couldNotRetrieveAudioOptions: {
         on: {
-          RETRY: "requestingAudioOptions",
+          RETRY: { target: "requestingAudioOptions" },
         },
       },
     },

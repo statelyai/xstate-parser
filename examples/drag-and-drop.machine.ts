@@ -56,7 +56,7 @@ const dragAndDropMachine = createMachine<
         on: {
           PICK_UP: {
             target: "dragging",
-            actions: ["assignPickedUpItemToContext"],
+            actions: "assignPickedUpItemToContext",
           },
         },
       },
@@ -70,7 +70,7 @@ const dragAndDropMachine = createMachine<
             ],
           },
           DRAG_REACHED_INTERSECTION: {
-            actions: ["assignCurrentPositionToContext"],
+            actions: "assignCurrentPositionToContext",
           },
         },
       },

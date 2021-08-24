@@ -22,17 +22,17 @@ const multiStepTimerMachine = createMachine<
     },
     firstStep: {
       after: {
-        3000: "secondStep",
+        3000: { target: "secondStep" },
       },
     },
     secondStep: {
       after: {
-        3000: "thirdStep",
+        3000: { target: "thirdStep" },
       },
     },
     thirdStep: {
       after: {
-        3000: "idle",
+        3000: { target: "idle" },
       },
     },
   },

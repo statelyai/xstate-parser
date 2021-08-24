@@ -44,7 +44,7 @@ const multiStepFormMachine = createMachine<
         on: {
           CONFIRM_BENEFICIARY: {
             target: "enteringDate",
-            actions: ["assignBeneficiaryInfoToContext"],
+            actions: "assignBeneficiaryInfoToContext",
           },
         },
       },
@@ -56,7 +56,7 @@ const multiStepFormMachine = createMachine<
           },
           CONFIRM_DATE: {
             target: "confirming",
-            actions: ["assignDateToContext"],
+            actions: "assignDateToContext",
           },
         },
       },
@@ -67,9 +67,9 @@ const multiStepFormMachine = createMachine<
         initial: "idle",
         states: {
           idle: {
-            exit: ["clearErrorMessage"],
+            exit: "clearErrorMessage",
             on: {
-              CONFIRM: "submitting",
+              CONFIRM: { target: "submitting" },
               BACK: {
                 target: "#enteringDate",
               },

@@ -59,7 +59,7 @@ const queueMachine = createMachine<QueueMachineContext, QueueMachineEvent>(
           src: "executeOldestItemInQueue",
           onDone: {
             target: "checkingIfThereAreMoreItems",
-            actions: ["removeOldestItemFromQueue"],
+            actions: "removeOldestItemFromQueue",
           },
           onError: {
             target: "awaitingRetry",
@@ -72,7 +72,7 @@ const queueMachine = createMachine<QueueMachineContext, QueueMachineEvent>(
             actions: "addItemToQueue",
             target: "executingItem",
           },
-          RETRY: "executingItem",
+          RETRY: { target: "executingItem" },
         },
       },
       checkingIfThereAreMoreItems: {
