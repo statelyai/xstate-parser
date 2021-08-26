@@ -23,6 +23,12 @@ export interface AnyParser<Result> {
   matches: (node: any) => boolean;
 }
 
+export interface ParseResultLink {
+  sourceIndex: number;
+  parentIndex: number;
+}
+
 export interface ParseResult {
   machines: MachineParseResult[];
+  links: ParseResultLink[];
 }
