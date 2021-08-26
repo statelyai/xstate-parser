@@ -320,19 +320,22 @@ export const namedFunctionCall = <Argument1Result, Argument2Result>(
     },
   });
 
+  const matches = (node: t.CallExpression) => {
+    if (!namedFunctionParser.matches(node)) {
+      return false;
+    }
+
+    if (!t.isIdentifier(node.callee)) {
+      return false;
+    }
+
+    return node.callee.name === name;
+  };
+
   return {
-    matches: (node: t.CallExpression) => {
-      if (!namedFunctionParser.matches(node)) {
-        return false;
-      }
-
-      if (!t.isIdentifier(node.callee)) {
-        return false;
-      }
-
-      return node.callee.name === name;
-    },
+    matches,
     parse: (node: t.CallExpression, context) => {
+      if (!matches(node)) return;
       return {
         node,
         argument1Result: argument1Parser.parse(node.arguments[0], context),
