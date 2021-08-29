@@ -186,6 +186,31 @@ export class MachineParseResult {
     return services;
   };
 
+  getAllNamedDelays = () => {
+    const delays: Record<
+      string,
+      { node: t.Node; name: string; statePath: string[] }[]
+    > = {};
+
+    this.stateNodes.map((stateNode) => {
+      stateNode.ast.after?.properties.forEach((property) => {
+        if (t.isIdentifier(property.keyNode)) {
+          const key = property.key;
+          if (!delays[key]) {
+            delays[key] = [];
+          }
+          delays[key].push({
+            node: property.keyNode,
+            name: key,
+            statePath: stateNode.path,
+          });
+        }
+      });
+    });
+
+    return delays;
+  };
+
   getActionImplementation = (name: string) => {
     const node = this.ast?.options?.actions?.properties.find((property) => {
       return property.key === name;

@@ -10,6 +10,7 @@ const MachineOptionsObject = objectTypeWithKnownKeys({
   actions: objectOf(AnyNode),
   services: objectOf(AnyNode),
   guards: objectOf(AnyNode),
+  delays: objectOf(AnyNode),
   devTools: BooleanLiteral,
 });
 
