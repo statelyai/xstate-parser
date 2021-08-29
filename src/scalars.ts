@@ -34,5 +34,5 @@ export const BooleanLiteral = createParser({
 
 export const AnyNode = createParser({
   babelMatcher: t.isNode,
-  parseNode: (node) => node,
+  parseNode: (node) => ({ node }),
 });

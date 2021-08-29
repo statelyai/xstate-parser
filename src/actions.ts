@@ -14,6 +14,20 @@ import {
   unionType,
   wrapParserResult,
 } from "./utils";
+import {
+  AfterAction,
+  CancelAction,
+  DoneAction,
+  EscalateAction,
+  LogAction,
+  PureAction,
+  RaiseAction,
+  RespondAction,
+  SendParentAction,
+  SendUpdateAction,
+  StartAction,
+  StopAction,
+} from "./namedActions";
 
 export interface ActionNode {
   node: t.Node;
@@ -107,12 +121,49 @@ export const ChooseAction = wrapParserResult(
   },
 );
 
+interface AssignFirstArg {
+  node: t.Node;
+  value: {} | (() => {});
+}
+
+const AssignFirstArgObject = createParser({
+  babelMatcher: t.isObjectExpression,
+  parseNode: (node) => {
+    return {
+      node,
+      value: {},
+    };
+  },
+});
+
+const AssignFirstArgFunction = createParser({
+  babelMatcher: isFunctionOrArrowFunctionExpression,
+  parseNode: (node) => {
+    return {
+      node,
+      value: function anonymous() {
+        return {};
+      },
+    };
+  },
+});
+
+const AssignFirstArg = unionType<AssignFirstArg>([
+  AssignFirstArgObject,
+  AssignFirstArgFunction,
+]);
+
 export const AssignAction = wrapParserResult(
-  namedFunctionCall("assign", AnyNode),
+  namedFunctionCall("assign", AssignFirstArg),
   (result): ActionNode => {
     return {
       node: result.node,
-      action: assign(() => {}),
+      action: assign(
+        result.argument1Result?.value ||
+          (() => {
+            return {};
+          }),
+      ),
       name: "",
     };
   },
@@ -128,17 +179,22 @@ export const SendActionSecondArg = objectTypeWithKnownKeys({
 });
 
 export const SendAction = wrapParserResult(
-  namedFunctionCall("send", AnyNode, SendActionSecondArg),
+  namedFunctionCall(
+    "send",
+    unionType<{ node: t.Node; value?: string }>([StringLiteral, AnyNode]),
+    SendActionSecondArg,
+  ),
   (result): ActionNode => {
     return {
       node: result.node,
       name: "",
       action: send(
-        () => {
-          return {
-            type: "UNDEFINED",
-          };
-        },
+        result.argument1Result?.value ??
+          (() => {
+            return {
+              type: "UNDEFINED",
+            };
+          }),
         {
           id: result.argument2Result?.id?.value,
           to: result.argument2Result?.to?.value,
@@ -165,6 +221,18 @@ const NamedAction = unionType([
   AssignAction,
   SendAction,
   ForwardToAction,
+  AfterAction,
+  CancelAction,
+  DoneAction,
+  EscalateAction,
+  LogAction,
+  PureAction,
+  RaiseAction,
+  RespondAction,
+  SendUpdateAction,
+  StartAction,
+  StopAction,
+  SendParentAction,
 ]);
 
 const BasicAction = unionType([
