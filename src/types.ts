@@ -11,6 +11,7 @@ export interface StringLiteralNode {
 
 export interface ParserContext {
   file: t.File;
+  getRaw: (node: t.Node) => string;
 }
 
 export interface Parser<T extends t.Node = any, Result = any> {

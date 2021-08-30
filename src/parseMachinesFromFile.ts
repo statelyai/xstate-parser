@@ -29,6 +29,12 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
     CallExpression(path: any) {
       const ast = MachineCallExpression.parse(path.node, {
         file: parseResult,
+        getRaw: (node) => {
+          if (typeof node.start !== "number" || typeof node.end !== "number") {
+            return "";
+          }
+          return fileContents.slice(node.start, node.end);
+        },
       });
       if (ast) {
         result.machines.push(new MachineParseResult({ ast }));

@@ -30,14 +30,14 @@ export const unionType = <Result>(
  */
 export const wrapParserResult = <T extends t.Node, Result, NewResult>(
   parser: AnyParser<Result>,
-  changeResult: (result: Result, node: T) => NewResult,
+  changeResult: (result: Result, node: T, context: ParserContext) => NewResult,
 ): AnyParser<NewResult> => {
   return {
     matches: parser.matches,
     parse: (node: any, context) => {
       const result = parser.parse(node, context);
       if (!result) return undefined;
-      return changeResult(result, node);
+      return changeResult(result, node, context);
     },
   };
 };
