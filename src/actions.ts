@@ -28,11 +28,13 @@ import {
   StartAction,
   StopAction,
 } from "./namedActions";
+import { pureFunction } from "./pureFunction";
 
 export interface ActionNode {
   node: t.Node;
   action: Action<any, any>;
   name: string;
+  isPureFunction?: boolean;
 }
 
 export const ActionAsIdentifier = createParser({
@@ -46,16 +48,31 @@ export const ActionAsIdentifier = createParser({
   },
 });
 
-export const ActionAsFunctionExpression = createParser({
-  babelMatcher: isFunctionOrArrowFunctionExpression,
-  parseNode: (node): ActionNode => {
+export const ActionAsFunctionExpression = wrapParserResult(
+  pureFunction,
+  (result, node, context): ActionNode => {
+    let action = function anonymous() {
+      return {};
+    };
+    // console.log(
+    //   result.paramNames,
+    //   result.bodyParseResult?.disallowedIdentifiers,
+    //   context.getRaw(result.bodyParseResult?.node),
+    // );
+    if (result.bodyParseResult?.isPure) {
+      action = new Function(
+        ...result.paramNames,
+        context.getRaw(result.bodyParseResult.node),
+      ) as any;
+    }
     return {
-      node,
-      action: function actions() {},
+      node: result.functionNode,
+      isPureFunction: result.bodyParseResult?.isPure || false,
+      action,
       name: "",
     };
   },
-});
+);
 
 export const ActionAsString = createParser({
   babelMatcher: t.isStringLiteral,
@@ -124,6 +141,7 @@ export const ChooseAction = wrapParserResult(
 interface AssignFirstArg {
   node: t.Node;
   value: {} | (() => {});
+  isPure: boolean;
 }
 
 const AssignFirstArgObject = createParser({
@@ -132,21 +150,28 @@ const AssignFirstArgObject = createParser({
     return {
       node,
       value: {},
+      isPure: true,
     };
   },
 });
 
-const AssignFirstArgFunction = createParser({
-  babelMatcher: isFunctionOrArrowFunctionExpression,
-  parseNode: (node) => {
+const AssignFirstArgFunction = wrapParserResult(
+  pureFunction,
+  (result, _node, context): AssignFirstArg => {
+    let value = function anonymous() {
+      return {};
+    };
+    if (result.bodyParseResult?.isPure) {
+      console.log(context.getRaw(result.bodyParseResult.node));
+      value = new Function(context.getRaw(result.bodyParseResult.node)) as any;
+    }
     return {
-      node,
-      value: function anonymous() {
-        return {};
-      },
+      node: result.functionNode,
+      isPure: result.bodyParseResult?.isPure || false,
+      value: value,
     };
   },
-});
+);
 
 const AssignFirstArg = unionType<AssignFirstArg>([
   AssignFirstArgObject,
