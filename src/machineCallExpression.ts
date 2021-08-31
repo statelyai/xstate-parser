@@ -20,6 +20,7 @@ export const MachineCallExpression = createParser({
         calleeName: node.callee.property.name,
         definition: StateNode.parse(node.arguments[0], context),
         options: MachineOptions.parse(node.arguments[1], context),
+        node,
       };
     }
 
@@ -32,6 +33,7 @@ export const MachineCallExpression = createParser({
         calleeName: node.callee.name,
         definition: StateNode.parse(node.arguments[0], context),
         options: MachineOptions.parse(node.arguments[1], context),
+        node,
       };
     }
   },
