@@ -39,7 +39,7 @@ export const ActionAsIdentifier = createParser({
   babelMatcher: t.isIdentifier,
   parseNode: (node): ActionNode => {
     return {
-      action: node.name,
+      action: function actions() {},
       node,
       name: node.name,
     };

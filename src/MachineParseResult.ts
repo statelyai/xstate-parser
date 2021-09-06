@@ -156,6 +156,49 @@ export class MachineParseResult {
       });
     });
 
+    this.stateNodes.forEach((state) => {
+      state.ast.entry?.forEach((action) => {
+        if (!actions[action.name]) {
+          actions[action.name] = [];
+        }
+        actions[action.name].push({
+          node: action.node,
+          action: action.action,
+          statePath: state.path,
+        });
+      });
+      state.ast.onEntry?.forEach((action) => {
+        if (!actions[action.name]) {
+          actions[action.name] = [];
+        }
+        actions[action.name].push({
+          node: action.node,
+          action: action.action,
+          statePath: state.path,
+        });
+      });
+      state.ast.exit?.forEach((action) => {
+        if (!actions[action.name]) {
+          actions[action.name] = [];
+        }
+        actions[action.name].push({
+          node: action.node,
+          action: action.action,
+          statePath: state.path,
+        });
+      });
+      state.ast.onExit?.forEach((action) => {
+        if (!actions[action.name]) {
+          actions[action.name] = [];
+        }
+        actions[action.name].push({
+          node: action.node,
+          action: action.action,
+          statePath: state.path,
+        });
+      });
+    });
+
     return actions;
   };
 
