@@ -49,9 +49,12 @@ export const ActionAsIdentifier = createParser({
 export const ActionAsFunctionExpression = createParser({
   babelMatcher: isFunctionOrArrowFunctionExpression,
   parseNode: (node): ActionNode => {
+    const action = function actions() {};
+
+    action.toJSON = () => "anonymous";
     return {
       node,
-      action: function actions() {},
+      action,
       name: "",
     };
   },
@@ -139,11 +142,16 @@ const AssignFirstArgObject = createParser({
 const AssignFirstArgFunction = createParser({
   babelMatcher: isFunctionOrArrowFunctionExpression,
   parseNode: (node) => {
+    const value = function anonymous() {
+      return {};
+    };
+    value.toJSON = () => {
+      return {};
+    };
+
     return {
       node,
-      value: function anonymous() {
-        return {};
-      },
+      value,
     };
   },
 });
@@ -156,14 +164,16 @@ const AssignFirstArg = unionType<AssignFirstArg>([
 export const AssignAction = wrapParserResult(
   namedFunctionCall("assign", AssignFirstArg),
   (result): ActionNode => {
+    const defaultAction = function anonymous() {
+      return {};
+    };
+    defaultAction.toJSON = () => {
+      return {};
+    };
+
     return {
       node: result.node,
-      action: assign(
-        result.argument1Result?.value ||
-          (() => {
-            return {};
-          }),
-      ),
+      action: assign(result.argument1Result?.value || defaultAction),
       name: "",
     };
   },

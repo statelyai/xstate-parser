@@ -36,3 +36,18 @@ export const AnyNode = createParser({
   babelMatcher: t.isNode,
   parseNode: (node) => ({ node }),
 });
+
+export const TemplateLiteral = createParser({
+  babelMatcher: t.isTemplateLiteral,
+  parseNode: (node) => {
+    let value = "";
+
+    node.quasis.forEach((quasi) => {
+      value = `${value}${quasi.value.raw}`;
+    });
+    return {
+      node,
+      value,
+    };
+  },
+});

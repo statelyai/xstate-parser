@@ -76,6 +76,12 @@ const parseStateNode = (
     config.always = getTransitions(astResult.always);
   }
 
+  if (astResult.meta?.description) {
+    config.meta = {
+      description: astResult.meta.description.value,
+    };
+  }
+
   if (astResult.onDone) {
     // @ts-ignore
     config.onDone = getTransitions(astResult.onDone);

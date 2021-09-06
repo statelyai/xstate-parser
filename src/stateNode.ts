@@ -14,6 +14,7 @@ import {
   objectTypeWithKnownKeys,
   unionType,
 } from "./utils";
+import { StateMeta } from "./meta";
 
 const On = objectOf(MaybeTransitionArray);
 
@@ -47,6 +48,7 @@ export type StateNodeReturn = {
   tags?: GetParserResult<typeof Tags>;
   states?: GetParserResult<AnyParser<ObjectOfReturn<StateNodeReturn>>>;
   node: t.Node;
+  meta?: GetParserResult<typeof StateMeta>;
 };
 
 const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
@@ -67,6 +69,7 @@ const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     on: On,
     tags: Tags,
     states: objectOf(StateNodeObject),
+    meta: StateMeta,
   }),
 );
 

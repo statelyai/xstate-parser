@@ -5,6 +5,7 @@ import { StateNodeReturn } from "./stateNode";
 import { toMachineConfig } from "./toMachineConfig";
 import { StringLiteralNode } from "./types";
 import { TransitionConfigNode } from "./transitions";
+import { ActionNode } from "./actions";
 
 /**
  * Gives some helpers to the user of the lib
@@ -136,33 +137,50 @@ export class MachineParseResult {
   };
 
   getAllNamedActions = () => {
-    const actions: Record<
-      string,
-      { node: t.Node; action: Action<any, any>; statePath: string[] }[]
-    > = {};
+    const actions = new RecordOfArrays<{
+      node: t.Node;
+      action: Action<any, any>;
+      statePath: string[];
+    }>();
+
+    const addActionIfHasName = (action: ActionNode, statePath: string[]) => {
+      if (action.name) {
+        actions.add(action.name, {
+          node: action.node,
+          action: action.action,
+          statePath,
+        });
+      }
+    };
 
     this.getTransitions().forEach((transition) => {
-      transition.config?.actions?.forEach((action) => {
-        if (action.name) {
-          if (!actions[action.name]) {
-            actions[action.name] = [];
-          }
-          actions[action.name].push({
-            node: action.node,
-            action: action.action,
-            statePath: transition.fromPath,
-          });
-        }
+      transition.config?.actions?.forEach((action) =>
+        addActionIfHasName(action, transition.fromPath),
+      );
+    });
+
+    this.getAllStateNodes().forEach((node) => {
+      node.ast.entry?.forEach((action) => {
+        addActionIfHasName(action, node.path);
+      });
+      node.ast.onEntry?.forEach((action) => {
+        addActionIfHasName(action, node.path);
+      });
+      node.ast.exit?.forEach((action) => {
+        addActionIfHasName(action, node.path);
+      });
+      node.ast.onExit?.forEach((action) => {
+        addActionIfHasName(action, node.path);
       });
     });
 
-    return actions;
+    return actions.toObject();
   };
 
   getAllNamedServices = () => {
     const services: Record<
       string,
-      { node: t.Node; name: string; statePath: string[] }[]
+      { node: t.Node; name: string; statePath: string[]; srcNode?: t.Node }[]
     > = {};
 
     this.stateNodes.map((stateNode) => {
@@ -178,6 +196,7 @@ export class MachineParseResult {
             name: invokeName,
             node: invoke.node,
             statePath: stateNode.path,
+            srcNode: invoke.src?.node,
           });
         }
       });
@@ -187,19 +206,18 @@ export class MachineParseResult {
   };
 
   getAllNamedDelays = () => {
-    const delays: Record<
-      string,
-      { node: t.Node; name: string; statePath: string[] }[]
-    > = {};
+    const delays = new RecordOfArrays<{
+      node: t.Node;
+      name: string;
+      statePath: string[];
+    }>();
 
     this.stateNodes.map((stateNode) => {
       stateNode.ast.after?.properties.forEach((property) => {
         if (t.isIdentifier(property.keyNode)) {
           const key = property.key;
-          if (!delays[key]) {
-            delays[key] = [];
-          }
-          delays[key].push({
+
+          delays.add(key, {
             node: property.keyNode,
             name: key,
             statePath: stateNode.path,
@@ -208,7 +226,7 @@ export class MachineParseResult {
       });
     });
 
-    return delays;
+    return delays.toObject();
   };
 
   getActionImplementation = (name: string) => {
@@ -234,4 +252,17 @@ export class MachineParseResult {
 
     return node;
   };
+}
+
+class RecordOfArrays<T> {
+  private map: Record<string, T[]> = {};
+
+  add = (key: string, value: T) => {
+    if (!this.map[key]) {
+      this.map[key] = [];
+    }
+    this.map[key].push(value);
+  };
+
+  toObject = () => this.map;
 }

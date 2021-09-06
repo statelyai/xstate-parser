@@ -32,10 +32,15 @@ const InvokeSrcStringLiteral = createParser({
 
 const InvokeSrcFunctionExpression = createParser({
   babelMatcher: isFunctionOrArrowFunctionExpression,
-  parseNode: (node): InvokeNode => ({
-    value: async function src() {},
-    node,
-  }),
+  parseNode: (node): InvokeNode => {
+    const value = async function src() {};
+
+    value.toJSON = () => "anonymous";
+    return {
+      value,
+      node,
+    };
+  },
 });
 
 const InvokeSrcNode = createParser({
