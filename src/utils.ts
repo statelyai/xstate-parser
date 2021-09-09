@@ -110,6 +110,26 @@ export const staticObjectProperty = <KeyResult>(
     },
   });
 
+export const spreadElement = <Result>(parser: AnyParser<Result>) => {
+  return createParser({
+    babelMatcher: t.isSpreadElement,
+    parseNode: (node, context) => {
+      const result = {
+        node,
+        argumentResult: parser.parse(node.argument, context),
+      };
+
+      return result;
+    },
+  });
+};
+
+export const spreadElementReferencingIdentifier = <Result>(
+  parser: AnyParser<Result>,
+) => {
+  return spreadElement(identifierReferencingVariableDeclaration(parser));
+};
+
 export const dynamicObjectProperty = <KeyResult>(
   keyParser: AnyParser<KeyResult>,
 ) =>
@@ -170,14 +190,29 @@ export const getPropertiesOfObjectExpression = (
   }[] = [];
 
   node.properties.forEach((property) => {
-    const result = propertyKey.parse(property, context);
-    if (result && result?.key) {
-      propertiesToReturn.push({
-        key: `${result.key?.value}`,
-        node: result.node,
-        keyNode: result.key.node,
-      });
-    }
+    const propertiesToParse: t.Node[] = [property];
+
+    const spreadElementResult = spreadElementReferencingIdentifier(
+      createParser({
+        babelMatcher: t.isObjectExpression,
+        parseNode: (node) => node,
+      }),
+    ).parse(property, context);
+
+    propertiesToParse.push(
+      ...(spreadElementResult?.argumentResult?.properties || []),
+    );
+
+    propertiesToParse.forEach((property) => {
+      const result = propertyKey.parse(property, context);
+      if (result && result?.key) {
+        propertiesToReturn.push({
+          key: `${result.key?.value}`,
+          node: result.node,
+          keyNode: result.key.node,
+        });
+      }
+    });
   });
 
   return propertiesToReturn;

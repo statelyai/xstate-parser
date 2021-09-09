@@ -4,7 +4,14 @@ const START_STATE = "first";
 const OTHER_STATE = "second";
 const COOL = "cool";
 
+const otherStates = {
+  [START_STATE]: {},
+  awesome: {},
+  "nice stuff": {},
+};
+
 const states = {
+  ...otherStates,
   [START_STATE]: {},
   [OTHER_STATE]: {
     on: {
