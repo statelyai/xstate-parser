@@ -1,10 +1,8 @@
 import * as t from "@babel/types";
 import { Condition } from "xstate";
-import {
-  createParser,
-  isFunctionOrArrowFunctionExpression,
-  unionType,
-} from "./utils";
+import { createParser } from "./createParser";
+import { unionType } from "./unionType";
+import { isFunctionOrArrowFunctionExpression } from "./utils";
 
 export interface CondNode {
   node: t.Node;

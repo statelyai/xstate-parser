@@ -28,7 +28,7 @@ describe("Examples", () => {
           const machineConfigUnderTest = machines[index].toConfig();
 
           expect(machineConfigUnderTest).toEqual(sourceMachineConfig);
-        } catch (e) {
+        } catch (e: any) {
           if (!e.message.includes("Received: serializes to the same string")) {
             throw e;
           }

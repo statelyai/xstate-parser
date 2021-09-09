@@ -1,5 +1,6 @@
 import * as t from "@babel/types";
-import { createParser, unionType } from "./utils";
+import { createParser } from "./createParser";
+import { unionType } from "./unionType";
 
 interface HistoryNode {
   node: t.Node;

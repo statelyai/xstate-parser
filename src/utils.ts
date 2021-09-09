@@ -1,28 +1,13 @@
 import traverse from "@babel/traverse";
 import * as t from "@babel/types";
-import { AnyParser, Parser, ParserContext } from "./types";
-
-/**
- * Used to declare when a type can be either one
- * thing or another. Each parser added must
- * return the same result
- */
-export const unionType = <Result>(
-  parsers: AnyParser<Result>[],
-): AnyParser<Result> => {
-  const matches = (node: any) => {
-    return parsers.some((parser) => parser.matches(node));
-  };
-  const parse = (node: any, context: ParserContext): Result | undefined => {
-    const parser = parsers.find((parser) => parser.matches(node));
-    return parser?.parse(node, context);
-  };
-
-  return {
-    matches,
-    parse,
-  };
-};
+import { createParser } from "./createParser";
+import {
+  identifierReferencingVariableDeclaration,
+  maybeIdentifierTo,
+} from "./identifiers";
+import { NumericLiteral, StringLiteral, TemplateLiteral } from "./scalars";
+import { AnyParser, ParserContext } from "./types";
+import { unionType } from "./unionType";
 
 /**
  * Allows you to wrap a parser and reformulate
@@ -39,27 +24,6 @@ export const wrapParserResult = <T extends t.Node, Result, NewResult>(
       if (!result) return undefined;
       return changeResult(result, node);
     },
-  };
-};
-
-/**
- * Creates a parser, which can be run later on AST nodes
- * to work out if they match
- */
-export const createParser = <T extends t.Node, Result>(params: {
-  babelMatcher: (node: any) => node is T;
-  parseNode: (node: T, context: ParserContext) => Result;
-}): Parser<T, Result> => {
-  const matches = (node: T) => {
-    return params.babelMatcher(node);
-  };
-  const parse = (node: any, context: ParserContext): Result | undefined => {
-    if (!matches(node)) return undefined;
-    return params.parseNode(node, context);
-  };
-  return {
-    parse,
-    matches,
   };
 };
 
@@ -125,41 +89,93 @@ export const arrayOf = <Result>(
   });
 };
 
+export const staticObjectProperty = <KeyResult>(
+  keyParser: AnyParser<KeyResult>,
+) =>
+  createParser<
+    t.ObjectProperty,
+    {
+      node: t.ObjectProperty;
+      key?: KeyResult;
+    }
+  >({
+    babelMatcher: (node): node is t.ObjectProperty => {
+      return t.isObjectProperty(node) && !node.computed;
+    },
+    parseNode: (node, context) => {
+      return {
+        node,
+        key: keyParser.parse(node.key, context),
+      };
+    },
+  });
+
+export const dynamicObjectProperty = <KeyResult>(
+  keyParser: AnyParser<KeyResult>,
+) =>
+  createParser<
+    t.ObjectProperty,
+    {
+      node: t.ObjectProperty;
+      key?: KeyResult;
+    }
+  >({
+    babelMatcher: (node): node is t.ObjectProperty => {
+      return t.isObjectProperty(node) && node.computed;
+    },
+    parseNode: (node, context) => {
+      return {
+        node,
+        key: keyParser.parse(node.key, context),
+      };
+    },
+  });
+
+const staticPropertyWithKey = staticObjectProperty(
+  unionType<{ node: t.Node; value: string | number }>([
+    createParser({
+      babelMatcher: t.isIdentifier,
+      parseNode: (node) => {
+        return {
+          node,
+          value: node.name,
+        };
+      },
+    }),
+    StringLiteral,
+    NumericLiteral,
+  ]),
+);
+
+const dynamicPropertyWithKey = dynamicObjectProperty(
+  identifierReferencingVariableDeclaration(
+    unionType([StringLiteral, TemplateLiteral]),
+  ),
+);
+
+const propertyKey = unionType([staticPropertyWithKey, dynamicPropertyWithKey]);
+
 /**
  * Utility function for grabbing the properties of
  * an object expression
  */
-export const getPropertiesOfObjectExpression = (node: t.ObjectExpression) => {
+export const getPropertiesOfObjectExpression = (
+  node: t.ObjectExpression,
+  context: ParserContext,
+) => {
   const propertiesToReturn: {
     node: t.ObjectProperty;
     key: string;
-    keyNode: t.Identifier | t.StringLiteral | t.NumericLiteral;
+    keyNode: t.Node;
   }[] = [];
 
   node.properties.forEach((property) => {
-    if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
+    const result = propertyKey.parse(property, context);
+    if (result && result?.key) {
       propertiesToReturn.push({
-        node: property,
-        key: property.key.name,
-        keyNode: property.key,
-      });
-    } else if (
-      t.isObjectProperty(property) &&
-      t.isStringLiteral(property.key)
-    ) {
-      propertiesToReturn.push({
-        node: property,
-        key: property.key.value,
-        keyNode: property.key,
-      });
-    } else if (
-      t.isObjectProperty(property) &&
-      t.isNumericLiteral(property.key)
-    ) {
-      propertiesToReturn.push({
-        node: property,
-        key: `${property.key.value}`,
-        keyNode: property.key,
+        key: `${result.key?.value}`,
+        node: result.node,
+        keyNode: result.key.node,
       });
     }
   });
@@ -188,61 +204,43 @@ export const objectTypeWithKnownKeys = <
 >(
   parserObject: T | (() => T),
 ) =>
-  createParser<t.ObjectExpression, GetObjectKeysResult<T>>({
-    babelMatcher: t.isObjectExpression,
-    parseNode: (node, context) => {
-      const properties = getPropertiesOfObjectExpression(node);
-      const parseObject =
-        typeof parserObject === "function" ? parserObject() : parserObject;
+  maybeIdentifierTo(
+    createParser<t.ObjectExpression, GetObjectKeysResult<T>>({
+      babelMatcher: t.isObjectExpression,
+      parseNode: (node, context) => {
+        const properties = getPropertiesOfObjectExpression(node, context);
+        const parseObject =
+          typeof parserObject === "function" ? parserObject() : parserObject;
 
-      const toReturn = {
-        node,
-      };
+        const toReturn = {
+          node,
+        };
 
-      properties?.forEach((property) => {
-        const key = property.key;
-        const parser = parseObject[key];
+        properties?.forEach((property) => {
+          const key = property.key;
+          const parser = parseObject[key];
 
-        if (!parser) return;
+          if (!parser) return;
 
-        const result = parser.parse(property.node.value, context);
+          const result = parser.parse(property.node.value, context);
 
-        // @ts-ignore
-        toReturn[key] = result;
-      });
+          // @ts-ignore
+          toReturn[key] = result;
+        });
 
-      return toReturn as GetObjectKeysResult<T>;
-    },
-  });
+        return toReturn as GetObjectKeysResult<T>;
+      },
+    }),
+  );
 
 export interface ObjectOfReturn<Result> {
   node: t.Node;
   properties: {
-    keyNode: t.Identifier | t.StringLiteral | t.NumericLiteral;
+    keyNode: t.Node;
     key: string;
     result: Result;
   }[];
 }
-
-/**
- * Used for when you expect an identifier to be used
- * which references a variable declaration of a certain type
- */
-export const identifierReferencingVariableDeclaration = <Result>(
-  parser: AnyParser<Result>,
-) => {
-  return createParser({
-    babelMatcher: t.isIdentifier,
-    parseNode: (node, context) => {
-      const variableDeclarator = findVariableDeclaratorWithName(
-        context.file,
-        node.name,
-      );
-
-      return parser.parse(variableDeclarator?.init, context);
-    },
-  });
-};
 
 /**
  * Used when you have a keyed object where all the
@@ -252,52 +250,33 @@ export const identifierReferencingVariableDeclaration = <Result>(
 export const objectOf = <Result>(
   parser: AnyParser<Result>,
 ): AnyParser<ObjectOfReturn<Result>> => {
-  return createParser({
-    babelMatcher: t.isObjectExpression,
-    parseNode: (node, context) => {
-      const properties = getPropertiesOfObjectExpression(node);
+  return maybeIdentifierTo(
+    createParser({
+      babelMatcher: t.isObjectExpression,
+      parseNode: (node, context) => {
+        const properties = getPropertiesOfObjectExpression(node, context);
 
-      const toReturn = {
-        node,
-        properties: [],
-      } as ObjectOfReturn<Result>;
+        const toReturn = {
+          node,
+          properties: [],
+        } as ObjectOfReturn<Result>;
 
-      properties.forEach((property) => {
-        const result = parser.parse(property.node.value, context);
+        properties.forEach((property) => {
+          const result = parser.parse(property.node.value, context);
 
-        if (result) {
-          toReturn.properties.push({
-            key: property.key,
-            keyNode: property.keyNode,
-            result,
-          });
-        }
-      });
+          if (result) {
+            toReturn.properties.push({
+              key: property.key,
+              keyNode: property.keyNode,
+              result,
+            });
+          }
+        });
 
-      return toReturn;
-    },
-  });
-};
-
-/**
- * Finds a declarator in the same file which corresponds
- * to an identifier of the name you provide
- */
-export const findVariableDeclaratorWithName = (
-  file: any,
-  name: string,
-): t.VariableDeclarator | null | undefined => {
-  let declarator: t.VariableDeclarator | null | undefined = null;
-
-  traverse(file, {
-    VariableDeclarator(path) {
-      if (t.isIdentifier(path.node.id) && path.node.id.name === name) {
-        declarator = path.node as any;
-      }
-    },
-  });
-
-  return declarator;
+        return toReturn;
+      },
+    }),
+  );
 };
 
 /**
@@ -313,12 +292,14 @@ export const namedFunctionCall = <Argument1Result, Argument2Result>(
   argument1Result: Argument1Result | undefined;
   argument2Result: Argument2Result | undefined;
 }> => {
-  const namedFunctionParser = createParser({
-    babelMatcher: t.isCallExpression,
-    parseNode: (node) => {
-      return node;
-    },
-  });
+  const namedFunctionParser = maybeIdentifierTo(
+    createParser({
+      babelMatcher: t.isCallExpression,
+      parseNode: (node) => {
+        return node;
+      },
+    }),
+  );
 
   return {
     matches: (node: t.CallExpression) => {

@@ -14,8 +14,9 @@ import {
 } from "xstate/lib/actions";
 import type { ActionNode } from "./actions";
 import { AnyNode, NumericLiteral, StringLiteral } from "./scalars";
-import { namedFunctionCall, unionType, wrapParserResult } from "./utils";
+import { namedFunctionCall, wrapParserResult } from "./utils";
 import * as t from "@babel/types";
+import { unionType } from "./unionType";
 
 export const AfterAction = wrapParserResult(
   namedFunctionCall(

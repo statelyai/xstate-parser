@@ -1,10 +1,6 @@
+import { maybeIdentifierTo } from "./identifiers";
 import { AnyNode, BooleanLiteral } from "./scalars";
-import {
-  identifierReferencingVariableDeclaration,
-  objectOf,
-  objectTypeWithKnownKeys,
-  unionType,
-} from "./utils";
+import { objectOf, objectTypeWithKnownKeys } from "./utils";
 
 const MachineOptionsObject = objectTypeWithKnownKeys({
   actions: objectOf(AnyNode),
@@ -14,7 +10,4 @@ const MachineOptionsObject = objectTypeWithKnownKeys({
   devTools: BooleanLiteral,
 });
 
-export const MachineOptions = unionType([
-  MachineOptionsObject,
-  identifierReferencingVariableDeclaration(MachineOptionsObject),
-]);
+export const MachineOptions = maybeIdentifierTo(MachineOptionsObject);

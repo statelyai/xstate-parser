@@ -1,7 +1,8 @@
 import * as t from "@babel/types";
 import { StateNode } from "./stateNode";
-import { createParser, GetParserResult } from "./utils";
+import { GetParserResult } from "./utils";
 import { MachineOptions } from "./options";
+import { createParser } from "./createParser";
 
 export type TMachineCallExpression = GetParserResult<
   typeof MachineCallExpression

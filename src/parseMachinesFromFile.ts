@@ -18,7 +18,11 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
 
   const parseResult = parser.parse(fileContents, {
     sourceType: "module",
-    plugins: ["typescript", "jsx"],
+    plugins: [
+      "typescript",
+      "jsx",
+      ["decorators", { decoratorsBeforeExport: false }],
+    ],
   });
 
   let result: ParseResult = {

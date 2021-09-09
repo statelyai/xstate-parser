@@ -6,12 +6,10 @@ import { Cond } from "./conds";
 import { AnyNode, NumericLiteral, StringLiteral } from "./scalars";
 import {
   arrayOf,
-  createParser,
   isFunctionOrArrowFunctionExpression,
   maybeArrayOf,
   namedFunctionCall,
   objectTypeWithKnownKeys,
-  unionType,
   wrapParserResult,
 } from "./utils";
 import {
@@ -28,6 +26,9 @@ import {
   StartAction,
   StopAction,
 } from "./namedActions";
+import { createParser } from "./createParser";
+import { unionType } from "./unionType";
+import { maybeIdentifierTo } from "./identifiers";
 
 export interface ActionNode {
   node: t.Node;
@@ -46,30 +47,34 @@ export const ActionAsIdentifier = createParser({
   },
 });
 
-export const ActionAsFunctionExpression = createParser({
-  babelMatcher: isFunctionOrArrowFunctionExpression,
-  parseNode: (node): ActionNode => {
-    const action = function actions() {};
+export const ActionAsFunctionExpression = maybeIdentifierTo(
+  createParser({
+    babelMatcher: isFunctionOrArrowFunctionExpression,
+    parseNode: (node): ActionNode => {
+      const action = function actions() {};
 
-    action.toJSON = () => "anonymous";
-    return {
-      node,
-      action,
-      name: "",
-    };
-  },
-});
+      action.toJSON = () => "anonymous";
+      return {
+        node,
+        action,
+        name: "",
+      };
+    },
+  }),
+);
 
-export const ActionAsString = createParser({
-  babelMatcher: t.isStringLiteral,
-  parseNode: (node): ActionNode => {
-    return {
-      action: node.value,
-      node,
-      name: node.value,
-    };
-  },
-});
+export const ActionAsString = maybeIdentifierTo(
+  createParser({
+    babelMatcher: t.isStringLiteral,
+    parseNode: (node): ActionNode => {
+      return {
+        action: node.value,
+        node,
+        name: node.value,
+      };
+    },
+  }),
+);
 
 export const ActionAsNode = createParser({
   babelMatcher: t.isNode,

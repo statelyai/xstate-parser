@@ -7,14 +7,13 @@ import { MaybeTransitionArray } from "./transitions";
 import { AnyParser } from "./types";
 import {
   GetParserResult,
-  identifierReferencingVariableDeclaration,
   maybeArrayOf,
   objectOf,
   ObjectOfReturn,
   objectTypeWithKnownKeys,
-  unionType,
 } from "./utils";
 import { StateMeta } from "./meta";
+import { maybeIdentifierTo } from "./identifiers";
 
 const On = objectOf(MaybeTransitionArray);
 
@@ -73,7 +72,4 @@ const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
   }),
 );
 
-const IdentifierToStateNode =
-  identifierReferencingVariableDeclaration(StateNodeObject);
-
-export const StateNode = unionType([StateNodeObject, IdentifierToStateNode]);
+export const StateNode = maybeIdentifierTo(StateNodeObject);

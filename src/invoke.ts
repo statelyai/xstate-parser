@@ -1,12 +1,13 @@
 import * as t from "@babel/types";
-import { BooleanLiteral } from "./scalars";
+import { createParser } from "./createParser";
+import { maybeIdentifierTo } from "./identifiers";
+import { BooleanLiteral, StringLiteral } from "./scalars";
 import { MaybeTransitionArray } from "./transitions";
+import { unionType } from "./unionType";
 import {
-  createParser,
   isFunctionOrArrowFunctionExpression,
   maybeArrayOf,
   objectTypeWithKnownKeys,
-  unionType,
 } from "./utils";
 
 interface InvokeNode {
@@ -14,34 +15,20 @@ interface InvokeNode {
   value: string | (() => Promise<void>);
 }
 
-const InvokeIdStringLiteral = createParser({
-  babelMatcher: t.isStringLiteral,
-  parseNode: (node) => ({
-    node,
-    value: node.value,
+const InvokeSrcFunctionExpression = maybeIdentifierTo(
+  createParser({
+    babelMatcher: isFunctionOrArrowFunctionExpression,
+    parseNode: (node): InvokeNode => {
+      const value = async function src() {};
+
+      value.toJSON = () => "anonymous";
+      return {
+        value,
+        node,
+      };
+    },
   }),
-});
-
-const InvokeSrcStringLiteral = createParser({
-  babelMatcher: t.isStringLiteral,
-  parseNode: (node): InvokeNode => ({
-    node,
-    value: node.value,
-  }),
-});
-
-const InvokeSrcFunctionExpression = createParser({
-  babelMatcher: isFunctionOrArrowFunctionExpression,
-  parseNode: (node): InvokeNode => {
-    const value = async function src() {};
-
-    value.toJSON = () => "anonymous";
-    return {
-      value,
-      node,
-    };
-  },
-});
+);
 
 const InvokeSrcNode = createParser({
   babelMatcher: t.isNode,
@@ -52,13 +39,13 @@ const InvokeSrcNode = createParser({
 });
 
 const InvokeSrc = unionType([
-  InvokeSrcStringLiteral,
+  StringLiteral,
   InvokeSrcFunctionExpression,
   InvokeSrcNode,
 ]);
 
 const InvokeConfigObject = objectTypeWithKnownKeys({
-  id: InvokeIdStringLiteral,
+  id: StringLiteral,
   src: InvokeSrc,
   onDone: MaybeTransitionArray,
   onError: MaybeTransitionArray,
