@@ -59,6 +59,14 @@ export class MachineParseResult {
           });
         });
       });
+      stateNode.ast.after?.properties.forEach((after) => {
+        after.result.forEach((transition) => {
+          targets.push({
+            config: transition,
+            fromPath: stateNode.path,
+          });
+        });
+      });
       stateNode.ast.onDone?.forEach((transition) => {
         targets.push({
           config: transition,
