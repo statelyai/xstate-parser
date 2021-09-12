@@ -5,7 +5,7 @@ import { StateNodeReturn } from "./stateNode";
 import { toMachineConfig } from "./toMachineConfig";
 import { StringLiteralNode } from "./types";
 import { TransitionConfigNode } from "./transitions";
-import { ActionNode } from "./actions";
+import { ActionNode, ParsedChooseCondition } from "./actions";
 
 /**
  * Gives some helpers to the user of the lib
@@ -115,17 +115,15 @@ export class MachineParseResult {
   };
 
   getAllNamedConds = () => {
-    const conds: Record<
-      string,
-      { node: t.Node; cond: Condition<any, any>; statePath: string[] }[]
-    > = {};
+    const conds = new RecordOfArrays<{
+      node: t.Node;
+      cond: Condition<any, any>;
+      statePath: string[];
+    }>();
 
     this.getTransitions().forEach((transition) => {
       if (transition.config?.cond?.name) {
-        if (!conds[transition.config.cond.name]) {
-          conds[transition.config.cond.name] = [];
-        }
-        conds[transition.config.cond.name].push({
+        conds.add(transition.config.cond.name, {
           node: transition.config.cond.node,
           cond: transition.config.cond.cond,
           statePath: transition.fromPath,
@@ -133,7 +131,62 @@ export class MachineParseResult {
       }
     });
 
-    return conds;
+    this.getAllActions().forEach((action) => {
+      action.node.chooseConditions?.forEach((chooseCondition) => {
+        if (chooseCondition.conditionNode?.name) {
+          conds.add(chooseCondition.conditionNode.name, {
+            node: chooseCondition.conditionNode.node,
+            cond: chooseCondition.conditionNode.cond,
+            statePath: action.statePath,
+          });
+        }
+      });
+    });
+
+    return conds.toObject();
+  };
+
+  private getAllActions = () => {
+    const actions: {
+      node: ActionNode;
+      statePath: string[];
+    }[] = [];
+
+    const addAction = (action: ActionNode, statePath: string[]) => {
+      actions.push({
+        node: action,
+        statePath,
+      });
+
+      action.chooseConditions?.forEach((chooseCondition) => {
+        chooseCondition.actionNodes.forEach((action) => {
+          addAction(action, statePath);
+        });
+      });
+    };
+
+    this.getTransitions().forEach((transition) => {
+      transition.config?.actions?.forEach((action) =>
+        addAction(action, transition.fromPath),
+      );
+    });
+
+    this.getAllStateNodes().forEach((node) => {
+      node.ast.entry?.forEach((action) => {
+        addAction(action, node.path);
+      });
+      node.ast.onEntry?.forEach((action) => {
+        addAction(action, node.path);
+      });
+      node.ast.exit?.forEach((action) => {
+        addAction(action, node.path);
+      });
+      node.ast.onExit?.forEach((action) => {
+        addAction(action, node.path);
+      });
+    });
+
+    return actions;
   };
 
   getAllNamedActions = () => {
@@ -141,6 +194,7 @@ export class MachineParseResult {
       node: t.Node;
       action: Action<any, any>;
       statePath: string[];
+      chooseConditions?: ParsedChooseCondition[];
     }>();
 
     const addActionIfHasName = (action: ActionNode, statePath: string[]) => {
@@ -149,29 +203,13 @@ export class MachineParseResult {
           node: action.node,
           action: action.action,
           statePath,
+          chooseConditions: action.chooseConditions,
         });
       }
     };
 
-    this.getTransitions().forEach((transition) => {
-      transition.config?.actions?.forEach((action) =>
-        addActionIfHasName(action, transition.fromPath),
-      );
-    });
-
-    this.getAllStateNodes().forEach((node) => {
-      node.ast.entry?.forEach((action) => {
-        addActionIfHasName(action, node.path);
-      });
-      node.ast.onEntry?.forEach((action) => {
-        addActionIfHasName(action, node.path);
-      });
-      node.ast.exit?.forEach((action) => {
-        addActionIfHasName(action, node.path);
-      });
-      node.ast.onExit?.forEach((action) => {
-        addActionIfHasName(action, node.path);
-      });
+    this.getAllActions().forEach((action) => {
+      addActionIfHasName(action.node, action.statePath);
     });
 
     return actions.toObject();

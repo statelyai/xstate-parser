@@ -2,7 +2,7 @@ import * as t from "@babel/types";
 import { Action, ChooseConditon } from "xstate";
 import { assign, choose, forwardTo, send } from "xstate/lib/actions";
 
-import { Cond } from "./conds";
+import { Cond, CondNode } from "./conds";
 import { AnyNode, NumericLiteral, StringLiteral } from "./scalars";
 import {
   arrayOf,
@@ -34,6 +34,13 @@ export interface ActionNode {
   node: t.Node;
   action: Action<any, any>;
   name: string;
+  chooseConditions?: ParsedChooseCondition[];
+}
+
+export interface ParsedChooseCondition {
+  condition: ChooseConditon<any, any>;
+  actionNodes: ActionNode[];
+  conditionNode?: CondNode;
 }
 
 export const ActionAsIdentifier = createParser({
@@ -100,30 +107,36 @@ const ChooseFirstArg = arrayOf(
 export const ChooseAction = wrapParserResult(
   namedFunctionCall("choose", ChooseFirstArg),
   (result, node): ActionNode => {
-    const conditions: ChooseConditon<any, any>[] = [];
+    const conditions: ParsedChooseCondition[] = [];
 
     result.argument1Result?.forEach((arg1Result) => {
       const toPush: typeof conditions[number] = {
-        actions: [],
+        condition: {
+          actions: [],
+        },
+        actionNodes: [],
       };
       if (arg1Result.actions) {
         const actionResult = arg1Result.actions.map((action) => action.action);
 
         if (actionResult.length === 1) {
-          toPush.actions = actionResult[0];
+          toPush.condition.actions = actionResult[0];
         } else {
-          toPush.actions = actionResult;
+          toPush.condition.actions = actionResult;
         }
+        toPush.actionNodes = arg1Result.actions;
       }
       if (arg1Result.cond) {
-        toPush.cond = arg1Result.cond.cond;
+        toPush.condition.cond = arg1Result.cond.cond;
+        toPush.conditionNode = arg1Result.cond;
       }
       conditions.push(toPush);
     });
 
     return {
       node: node,
-      action: choose(conditions),
+      action: choose(conditions.map((condition) => condition.condition)),
+      chooseConditions: conditions,
       name: "",
     };
   },
