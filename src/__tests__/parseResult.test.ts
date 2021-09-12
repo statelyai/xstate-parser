@@ -52,7 +52,9 @@ describe("MachineParseResult", () => {
     const targets = result.machines[0].getTransitionTargets();
 
     // Doing a map here to improve the error messaging
-    expect(targets.map((target) => target.target.value)).toHaveLength(6);
+    expect(
+      targets.map((target) => target.target.map((target) => target.value)),
+    ).toHaveLength(6);
   });
 
   it("Should let you list all of the named guards", () => {

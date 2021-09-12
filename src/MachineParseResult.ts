@@ -98,7 +98,7 @@ export class MachineParseResult {
       }))
       .filter((transition) => Boolean(transition.target)) as {
       fromPath: string[];
-      target: StringLiteralNode;
+      target: StringLiteralNode[];
     }[];
   };
 

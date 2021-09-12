@@ -163,8 +163,12 @@ export const getTransitions = (
 
   astTransitions?.forEach((transition) => {
     const toPush: TransitionConfigOrTarget<any, any> = {};
-    if (transition?.target) {
-      toPush.target = transition?.target.value;
+    if (transition?.target && transition?.target?.length > 0) {
+      if (transition.target.length === 1) {
+        toPush.target = transition?.target[0].value;
+      } else {
+        toPush.target = transition?.target.map((target) => target.value);
+      }
     }
     if (transition?.cond) {
       toPush.cond = transition?.cond.cond;

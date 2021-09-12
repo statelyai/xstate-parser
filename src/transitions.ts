@@ -14,18 +14,20 @@ import {
 
 export type TransitionConfigNode = GetParserResult<typeof TransitionObject>;
 
+const TransitionTarget = maybeArrayOf(StringLiteral);
+
 const TransitionObject = objectTypeWithKnownKeys({
-  target: StringLiteral,
+  target: TransitionTarget,
   actions: MaybeArrayOfActions,
   cond: Cond,
 });
 
 const TransitionConfigOrTargetLiteral = unionType([
   TransitionObject,
-  wrapParserResult(StringLiteral, (target): TransitionConfigNode => {
+  wrapParserResult(TransitionTarget, (targets): TransitionConfigNode => {
     return {
-      target,
-      node: target.node,
+      target: targets,
+      node: targets[0].node,
     };
   }),
 ]);
