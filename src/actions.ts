@@ -233,12 +233,18 @@ export const SendAction = wrapParserResult(
   },
 );
 
+export const ForwardToActionSecondArg = objectTypeWithKnownKeys({
+  to: StringLiteral,
+});
+
 export const ForwardToAction = wrapParserResult(
-  namedFunctionCall("forwardTo", StringLiteral),
+  namedFunctionCall("forwardTo", StringLiteral, ForwardToActionSecondArg),
   (result): ActionNode => {
     return {
       node: result.node,
-      action: forwardTo(result.argument1Result?.value || ""),
+      action: forwardTo(result.argument1Result?.value || "", {
+        to: result.argument2Result?.to?.value,
+      }),
       name: "",
     };
   },
