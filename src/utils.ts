@@ -168,9 +168,7 @@ const staticPropertyWithKey = staticObjectProperty(
 );
 
 const dynamicPropertyWithKey = dynamicObjectProperty(
-  identifierReferencingVariableDeclaration(
-    unionType([StringLiteral, TemplateLiteral]),
-  ),
+  maybeIdentifierTo(unionType([StringLiteral, TemplateLiteral])),
 );
 
 const propertyKey = unionType([staticPropertyWithKey, dynamicPropertyWithKey]);

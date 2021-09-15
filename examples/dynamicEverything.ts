@@ -13,6 +13,7 @@ const otherStates = {
 const states = {
   ...otherStates,
   [START_STATE]: {},
+  ["cool"]: {},
   [OTHER_STATE]: {
     on: {
       [COOL]: {
