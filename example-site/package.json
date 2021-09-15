@@ -3,14 +3,14 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "next",
-    "build": "next build",
+    "build": "yarn add xtate-parser-demo@latest && next build",
     "serve": "next serve"
   },
   "dependencies": {
     "react": "^17.0.0",
     "react-dom": "^17.0.0",
     "xstate": "^4.24.1",
-    "xstate-parser-demo": "*"
+    "xstate-parser-demo": "^0.1.4"
   },
   "devDependencies": {
     "@types/react": "^17.0.0",
