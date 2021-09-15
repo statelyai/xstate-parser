@@ -2,7 +2,7 @@ import { MaybeArrayOfActions } from "./actions";
 import * as t from "@babel/types";
 import { History } from "./history";
 import { Invoke } from "./invoke";
-import { StringLiteral } from "./scalars";
+import { AnyNode, StringLiteral } from "./scalars";
 import { MaybeTransitionArray } from "./transitions";
 import { AnyParser } from "./types";
 import {
@@ -48,6 +48,7 @@ export type StateNodeReturn = {
   states?: GetParserResult<AnyParser<ObjectOfReturn<StateNodeReturn>>>;
   node: t.Node;
   meta?: GetParserResult<typeof StateMeta>;
+  types?: GetParserResult<typeof AnyNode>;
 };
 
 const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
@@ -55,6 +56,9 @@ const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     id: StringLiteral,
     initial: StringLiteral,
     type: StringLiteral,
+    // Here because of a 'types' experiment in VSCode
+    // XState extension
+    types: AnyNode,
     history: History,
     delimiter: StringLiteral,
     entry: MaybeArrayOfActions,
