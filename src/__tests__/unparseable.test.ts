@@ -11,7 +11,7 @@ describe("Unparseable nodes", () => {
       })
     `);
 
-    expect(result.unparseableNodes.length).toEqual(1);
+    expect(result.unparseableNodes).toHaveLength(1);
 
     const node = result.unparseableNodes[0].node;
 
