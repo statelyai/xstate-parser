@@ -13,6 +13,7 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
   ) {
     return {
       machines: [],
+      unparseableNodes: [],
     };
   }
 
@@ -27,12 +28,16 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
 
   let result: ParseResult = {
     machines: [],
+    unparseableNodes: [],
   };
 
   traverse(parseResult as any, {
     CallExpression(path: any) {
       const ast = MachineCallExpression.parse(path.node, {
         file: parseResult,
+        reportCouldNotParseError: (node) => {
+          result.unparseableNodes.push({ node });
+        },
       });
       if (ast) {
         result.machines.push(new MachineParseResult({ ast }));
