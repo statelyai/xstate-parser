@@ -2,18 +2,20 @@ import { MaybeArrayOfActions } from "./actions";
 import * as t from "@babel/types";
 import { History } from "./history";
 import { Invoke } from "./invoke";
-import { AnyNode, StringLiteral } from "./scalars";
+import { AnyNode, StringLiteral, Unparseable } from "./scalars";
 import { MaybeTransitionArray } from "./transitions";
 import { AnyParser } from "./types";
 import {
   GetParserResult,
   maybeArrayOf,
+  maybeUnparseable,
   objectOf,
   ObjectOfReturn,
   objectTypeWithKnownKeys,
 } from "./utils";
 import { StateMeta } from "./meta";
 import { maybeIdentifierTo } from "./identifiers";
+import { unionType } from "./unionType";
 
 const On = objectOf(MaybeTransitionArray);
 
@@ -71,7 +73,7 @@ const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     after: After,
     on: On,
     tags: Tags,
-    states: objectOf(StateNodeObject),
+    states: maybeUnparseable(objectOf(maybeUnparseable(StateNodeObject))),
     meta: StateMeta,
   }),
 );

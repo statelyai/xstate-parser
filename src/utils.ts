@@ -5,7 +5,12 @@ import {
   identifierReferencingVariableDeclaration,
   maybeIdentifierTo,
 } from "./identifiers";
-import { NumericLiteral, StringLiteral, TemplateLiteral } from "./scalars";
+import {
+  NumericLiteral,
+  StringLiteral,
+  TemplateLiteral,
+  Unparseable,
+} from "./scalars";
 import { AnyParser, ParserContext } from "./types";
 import { unionType } from "./unionType";
 
@@ -360,4 +365,8 @@ export const isFunctionOrArrowFunctionExpression = (
   node: any,
 ): node is t.ArrowFunctionExpression | t.FunctionExpression => {
   return t.isArrowFunctionExpression(node) || t.isFunctionExpression(node);
+};
+
+export const maybeUnparseable = <Result>(parser: AnyParser<Result>) => {
+  return unionType([parser, Unparseable]);
 };

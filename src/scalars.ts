@@ -60,3 +60,11 @@ export const TemplateLiteral = maybeIdentifierTo(
     },
   }),
 );
+
+export const Unparseable = createParser({
+  babelMatcher: t.isNode,
+  parseNode: (node, context) => {
+    context.reportCouldNotParseError(node);
+    return undefined;
+  },
+});

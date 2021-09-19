@@ -1,5 +1,4 @@
 import * as t from "@babel/types";
-import { MachineConfig } from "xstate";
 import { MachineParseResult } from "./MachineParseResult";
 
 export type Location = t.SourceLocation | null;
@@ -11,6 +10,7 @@ export interface StringLiteralNode {
 
 export interface ParserContext {
   file: t.File;
+  reportCouldNotParseError: (node: t.Node) => void;
 }
 
 export interface Parser<T extends t.Node = any, Result = any> {
@@ -25,4 +25,5 @@ export interface AnyParser<Result> {
 
 export interface ParseResult {
   machines: MachineParseResult[];
+  unparseableNodes: { node: t.Node }[];
 }
