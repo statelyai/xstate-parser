@@ -45,6 +45,40 @@ export const identifierReferencingVariableDeclaration = <Result>(
   });
 };
 
+/**
+ * Finds a declarator in the same file which corresponds
+ * to an identifier of the name you provide
+ */
+export const findImportWithName = (
+  file: any,
+  name: string,
+): t.VariableDeclarator | null | undefined => {
+  let declarator: t.VariableDeclarator | null | undefined = null;
+
+  traverse(file, {
+    VariableDeclarator(path) {
+      if (t.isIdentifier(path.node.id) && path.node.id.name === name) {
+        declarator = path.node as any;
+      }
+    },
+  });
+
+  return declarator;
+};
+
+export const identifierReferencingImport = <Result>(
+  parser: AnyParser<Result>,
+) => {
+  return createParser({
+    babelMatcher: t.isIdentifier,
+    parseNode: (node, context) => {
+      const variableDeclarator = findImportWithName(context.file, node.name);
+
+      return parser.parse(variableDeclarator?.init, context);
+    },
+  });
+};
+
 export const maybeIdentifierTo = <Result>(parser: AnyParser<Result>) => {
   return unionType([parser, identifierReferencingVariableDeclaration(parser)]);
 };

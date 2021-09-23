@@ -11,6 +11,10 @@ export interface StringLiteralNode {
 
 export interface ParserContext {
   file: t.File;
+  resolveRequire: (
+    sourceFile: string,
+    relativeImport: string,
+  ) => string | undefined;
 }
 
 export interface Parser<T extends t.Node = any, Result = any> {
@@ -25,4 +29,12 @@ export interface AnyParser<Result> {
 
 export interface ParseResult {
   machines: MachineParseResult[];
+}
+
+export interface ParseOptions {
+  sourceFilename?: string;
+  resolveRequire?: (
+    sourceFile: string,
+    relativeImport: string,
+  ) => string | undefined;
 }
