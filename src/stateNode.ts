@@ -76,4 +76,4 @@ const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
   }),
 );
 
-export const StateNode = maybeIdentifierTo(StateNodeObject);
+export const StateNode = StateNodeObject;

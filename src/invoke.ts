@@ -3,6 +3,7 @@ import { createParser } from "./createParser";
 import { maybeIdentifierTo } from "./identifiers";
 import { BooleanLiteral, StringLiteral } from "./scalars";
 import { MaybeTransitionArray } from "./transitions";
+import { maybeTsAsExpression } from "./tsAsExpression";
 import { unionType } from "./unionType";
 import {
   isFunctionOrArrowFunctionExpression,
@@ -15,19 +16,21 @@ interface InvokeNode {
   value: string | (() => Promise<void>);
 }
 
-const InvokeSrcFunctionExpression = maybeIdentifierTo(
-  createParser({
-    babelMatcher: isFunctionOrArrowFunctionExpression,
-    parseNode: (node): InvokeNode => {
-      const value = async function src() {};
+const InvokeSrcFunctionExpression = maybeTsAsExpression(
+  maybeIdentifierTo(
+    createParser({
+      babelMatcher: isFunctionOrArrowFunctionExpression,
+      parseNode: (node): InvokeNode => {
+        const value = async function src() {};
 
-      value.toJSON = () => "anonymous";
-      return {
-        value,
-        node,
-      };
-    },
-  }),
+        value.toJSON = () => "anonymous";
+        return {
+          value,
+          node,
+        };
+      },
+    }),
+  ),
 );
 
 const InvokeSrcNode = createParser({

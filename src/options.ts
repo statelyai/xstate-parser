@@ -1,5 +1,6 @@
 import { maybeIdentifierTo } from "./identifiers";
 import { AnyNode, BooleanLiteral } from "./scalars";
+import { maybeTsAsExpression } from "./tsAsExpression";
 import { objectOf, objectTypeWithKnownKeys } from "./utils";
 
 const MachineOptionsObject = objectTypeWithKnownKeys({
@@ -10,4 +11,6 @@ const MachineOptionsObject = objectTypeWithKnownKeys({
   devTools: BooleanLiteral,
 });
 
-export const MachineOptions = maybeIdentifierTo(MachineOptionsObject);
+export const MachineOptions = maybeTsAsExpression(
+  maybeIdentifierTo(MachineOptionsObject),
+);

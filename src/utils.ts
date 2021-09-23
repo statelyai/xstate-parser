@@ -6,6 +6,7 @@ import {
   maybeIdentifierTo,
 } from "./identifiers";
 import { NumericLiteral, StringLiteral, TemplateLiteral } from "./scalars";
+import { maybeTsAsExpression } from "./tsAsExpression";
 import { AnyParser, ParserContext } from "./types";
 import { unionType } from "./unionType";
 
@@ -237,33 +238,35 @@ export const objectTypeWithKnownKeys = <
 >(
   parserObject: T | (() => T),
 ) =>
-  maybeIdentifierTo(
-    createParser<t.ObjectExpression, GetObjectKeysResult<T>>({
-      babelMatcher: t.isObjectExpression,
-      parseNode: (node, context) => {
-        const properties = getPropertiesOfObjectExpression(node, context);
-        const parseObject =
-          typeof parserObject === "function" ? parserObject() : parserObject;
+  maybeTsAsExpression(
+    maybeIdentifierTo(
+      createParser<t.ObjectExpression, GetObjectKeysResult<T>>({
+        babelMatcher: t.isObjectExpression,
+        parseNode: (node, context) => {
+          const properties = getPropertiesOfObjectExpression(node, context);
+          const parseObject =
+            typeof parserObject === "function" ? parserObject() : parserObject;
 
-        const toReturn = {
-          node,
-        };
+          const toReturn = {
+            node,
+          };
 
-        properties?.forEach((property) => {
-          const key = property.key;
-          const parser = parseObject[key];
+          properties?.forEach((property) => {
+            const key = property.key;
+            const parser = parseObject[key];
 
-          if (!parser) return;
+            if (!parser) return;
 
-          const result = parser.parse(property.node.value, context);
+            const result = parser.parse(property.node.value, context);
 
-          // @ts-ignore
-          toReturn[key] = result;
-        });
+            // @ts-ignore
+            toReturn[key] = result;
+          });
 
-        return toReturn as GetObjectKeysResult<T>;
-      },
-    }),
+          return toReturn as GetObjectKeysResult<T>;
+        },
+      }),
+    ),
   );
 
 export interface ObjectOfReturn<Result> {
@@ -325,13 +328,15 @@ export const namedFunctionCall = <Argument1Result, Argument2Result>(
   argument1Result: Argument1Result | undefined;
   argument2Result: Argument2Result | undefined;
 }> => {
-  const namedFunctionParser = maybeIdentifierTo(
-    createParser({
-      babelMatcher: t.isCallExpression,
-      parseNode: (node) => {
-        return node;
-      },
-    }),
+  const namedFunctionParser = maybeTsAsExpression(
+    maybeIdentifierTo(
+      createParser({
+        babelMatcher: t.isCallExpression,
+        parseNode: (node) => {
+          return node;
+        },
+      }),
+    ),
   );
 
   return {
