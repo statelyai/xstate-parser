@@ -13,6 +13,7 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
   ) {
     return {
       machines: [],
+      comments: [],
     };
   }
 
@@ -27,7 +28,17 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
 
   let result: ParseResult = {
     machines: [],
+    comments: [],
   };
+
+  parseResult.comments?.forEach((comment) => {
+    if (comment.value.includes("xstate-ignore-next-line")) {
+      result.comments.push({
+        node: comment,
+        type: "xstate-ignore-next-line",
+      });
+    }
+  });
 
   traverse(parseResult as any, {
     CallExpression(path: any) {
@@ -35,7 +46,9 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
         file: parseResult,
       });
       if (ast) {
-        result.machines.push(new MachineParseResult({ ast }));
+        result.machines.push(
+          new MachineParseResult({ ast, fileComments: result.comments }),
+        );
       }
     },
   });

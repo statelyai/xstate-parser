@@ -7,9 +7,11 @@ describe("Validation and failsafes", () => {
         parseMachinesFromFile(`
         const hello = 2;
       `),
-      ).toEqual({
-        machines: [],
-      });
+      ).toEqual(
+        expect.objectContaining({
+          machines: [],
+        }),
+      );
     });
   });
 });

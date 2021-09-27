@@ -23,6 +23,12 @@ export interface AnyParser<Result> {
   matches: (node: any) => boolean;
 }
 
+export interface Comment {
+  node: t.CommentLine | t.CommentBlock;
+  type: "xstate-ignore-next-line";
+}
+
 export interface ParseResult {
   machines: MachineParseResult[];
+  comments: Comment[];
 }

@@ -3,29 +3,33 @@ import * as t from "@babel/types";
 import { TMachineCallExpression } from "./machineCallExpression";
 import { StateNodeReturn } from "./stateNode";
 import { toMachineConfig } from "./toMachineConfig";
-import { StringLiteralNode } from "./types";
+import { StringLiteralNode, Comment } from "./types";
 import { TransitionConfigNode } from "./transitions";
 import { ActionNode, ParsedChooseCondition } from "./actions";
+
+export interface MachineParseResultStateNode {
+  path: string[];
+  ast: StateNodeReturn;
+}
 
 /**
  * Gives some helpers to the user of the lib
  */
 export class MachineParseResult {
   ast: TMachineCallExpression;
-  private stateNodes: { path: string[]; ast: StateNodeReturn }[];
+  private fileComments: Comment[];
+  private stateNodes: MachineParseResultStateNode[];
 
-  constructor(props: { ast: TMachineCallExpression }) {
+  constructor(props: { ast: TMachineCallExpression; fileComments: Comment[] }) {
     this.ast = props.ast;
+    this.fileComments = props.fileComments;
 
     this.stateNodes = this._getAllStateNodes();
   }
 
-  private _getAllStateNodes = (): {
-    path: string[];
-    ast: StateNodeReturn;
-  }[] => {
+  private _getAllStateNodes = (): MachineParseResultStateNode[] => {
     if (!this.ast?.definition) return [];
-    const nodes = [] as { path: string[]; ast: StateNodeReturn }[];
+    const nodes: MachineParseResultStateNode[] = [];
 
     const getSubNodes = (
       definition: StateNodeReturn | undefined,
@@ -37,6 +41,7 @@ export class MachineParseResult {
           path,
         });
       }
+
       definition?.states?.properties.forEach((stateNode) => {
         getSubNodes(stateNode.result, [...path, stateNode.key]);
       });
@@ -45,6 +50,17 @@ export class MachineParseResult {
     getSubNodes(this.ast?.definition, []);
 
     return nodes;
+  };
+
+  getIsIgnored = () => {
+    if (!this.ast?.callee?.loc) return false;
+    const isIgnored = this.fileComments.some((comment) => {
+      if (comment.type !== "xstate-ignore-next-line") return false;
+
+      return comment.node.loc.end.line === this.ast!.callee.loc!.start.line - 1;
+    });
+
+    return isIgnored;
   };
 
   getTransitions = () => {
