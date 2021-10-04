@@ -9,8 +9,8 @@ import {
   GetParserResult,
   maybeArrayOf,
   objectTypeWithKnownKeys,
-  wrapParserResult,
 } from "./utils";
+import { wrapParserResult } from "./wrapParserResult";
 
 export type TransitionConfigNode = GetParserResult<typeof TransitionObject>;
 

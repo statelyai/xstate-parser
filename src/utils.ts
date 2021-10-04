@@ -4,6 +4,7 @@ import { createParser } from "./createParser";
 import {
   identifierReferencingVariableDeclaration,
   maybeIdentifierTo,
+  memberExpressionReferencingEnumMember,
 } from "./identifiers";
 import {
   AnyNode,
@@ -14,24 +15,11 @@ import {
 import { maybeTsAsExpression } from "./tsAsExpression";
 import { AnyParser, ParserContext } from "./types";
 import { unionType } from "./unionType";
+import { wrapParserResult } from "./wrapParserResult";
 
-/**
- * Allows you to wrap a parser and reformulate
- * the result at the end of it
- */
-export const wrapParserResult = <T extends t.Node, Result, NewResult>(
-  parser: AnyParser<Result>,
-  changeResult: (result: Result, node: T) => NewResult,
-): AnyParser<NewResult> => {
-  return {
-    matches: parser.matches,
-    parse: (node: any, context) => {
-      const result = parser.parse(node, context);
-      if (!result) return undefined;
-      return changeResult(result, node);
-    },
-  };
-};
+export const parserFromBabelMatcher = <T extends t.Node>(
+  babelMatcher: (node: any) => node is T,
+) => createParser({ babelMatcher, parseNode: (node) => node });
 
 /**
  * Useful for when something might, or might not,
@@ -174,7 +162,12 @@ const staticPropertyWithKey = staticObjectProperty(
 );
 
 const dynamicPropertyWithKey = dynamicObjectProperty(
-  maybeIdentifierTo(unionType([StringLiteral, TemplateLiteral])),
+  maybeIdentifierTo(
+    unionType<{
+      node: t.Node;
+      value: string | number | undefined;
+    }>([StringLiteral, NumericLiteral, TemplateLiteral]),
+  ),
 );
 
 const propertyKey = unionType([staticPropertyWithKey, dynamicPropertyWithKey]);
@@ -230,8 +223,8 @@ export type GetObjectKeysResult<
   node: t.Node;
 };
 
-export type GetParserResult<TParser extends AnyParser<any>> = ReturnType<
-  TParser["parse"]
+export type GetParserResult<TParser extends AnyParser<any>> = NonNullable<
+  ReturnType<TParser["parse"]>
 >;
 
 /**

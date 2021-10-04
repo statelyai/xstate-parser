@@ -10,7 +10,6 @@ import {
   maybeArrayOf,
   namedFunctionCall,
   objectTypeWithKnownKeys,
-  wrapParserResult,
 } from "./utils";
 import {
   AfterAction,
@@ -30,6 +29,7 @@ import { createParser } from "./createParser";
 import { unionType } from "./unionType";
 import { maybeIdentifierTo } from "./identifiers";
 import { maybeTsAsExpression } from "./tsAsExpression";
+import { wrapParserResult } from "./wrapParserResult";
 
 export interface ActionNode {
   node: t.Node;

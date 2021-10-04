@@ -1,22 +1,35 @@
 import * as t from "@babel/types";
 import { createParser } from "./createParser";
-import { maybeIdentifierTo } from "./identifiers";
+import {
+  maybeIdentifierTo,
+  memberExpressionReferencingEnumMember,
+} from "./identifiers";
 import { StringLiteralNode } from "./types";
 import { maybeTsAsExpression } from "./tsAsExpression";
+import { unionType } from "./unionType";
+import { wrapParserResult } from "./wrapParserResult";
 
-export const StringLiteral = maybeTsAsExpression(
-  maybeIdentifierTo(
-    createParser({
-      babelMatcher: t.isStringLiteral,
-      parseNode: (node): StringLiteralNode => {
-        return {
-          value: node.value,
-          node,
-        };
-      },
-    }),
+export const StringLiteral = unionType([
+  wrapParserResult(memberExpressionReferencingEnumMember, (node) => {
+    return {
+      node: node.node as t.Node,
+      value: node.value,
+    };
+  }),
+  maybeTsAsExpression(
+    maybeIdentifierTo(
+      createParser({
+        babelMatcher: t.isStringLiteral,
+        parseNode: (node): StringLiteralNode => {
+          return {
+            value: node.value,
+            node,
+          };
+        },
+      }),
+    ),
   ),
-);
+]);
 
 export const NumericLiteral = maybeTsAsExpression(
   maybeIdentifierTo(

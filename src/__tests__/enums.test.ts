@@ -1,7 +1,7 @@
 import { parseMachinesFromFile } from "..";
 
 describe("Enums", () => {
-  it.skip("Should pick up state keys declared as enums and initials", () => {
+  it("Should pick up state keys declared as enums and initials", () => {
     const result = parseMachinesFromFile(`
       enum MyEnum {
         First
@@ -16,7 +16,7 @@ describe("Enums", () => {
     `);
 
     expect(result.machines[0].toConfig()).toEqual({
-      initial: 0,
+      initial: "0",
       states: {
         0: {},
       },
