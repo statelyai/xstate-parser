@@ -14,7 +14,10 @@ export interface ParserContext {
 }
 
 export interface Parser<T extends t.Node = any, Result = any> {
-  parse: (node: t.Node, context: ParserContext) => Result | undefined;
+  parse: (
+    node: t.Node | undefined | null,
+    context: ParserContext,
+  ) => Result | undefined;
   matches: (node: T) => boolean;
 }
 
