@@ -51,6 +51,11 @@ export const AnyNode = createParser({
   parseNode: (node) => ({ node }),
 });
 
+export const Identifier = createParser({
+  babelMatcher: t.isIdentifier,
+  parseNode: (node) => ({ node }),
+});
+
 export const TemplateLiteral = maybeTsAsExpression(
   maybeIdentifierTo(
     createParser({

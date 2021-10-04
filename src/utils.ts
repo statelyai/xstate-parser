@@ -5,7 +5,12 @@ import {
   identifierReferencingVariableDeclaration,
   maybeIdentifierTo,
 } from "./identifiers";
-import { NumericLiteral, StringLiteral, TemplateLiteral } from "./scalars";
+import {
+  AnyNode,
+  NumericLiteral,
+  StringLiteral,
+  TemplateLiteral,
+} from "./scalars";
 import { maybeTsAsExpression } from "./tsAsExpression";
 import { AnyParser, ParserContext } from "./types";
 import { unionType } from "./unionType";
