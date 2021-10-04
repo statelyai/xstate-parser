@@ -5,15 +5,20 @@ const states = {
   second: "SECOND",
   third: {
     fourth: "FOURTH",
+    deep: {
+      wow: "wow",
+    },
   },
 };
 
-const dynamic = createMachine({
+export const dynamic = createMachine({
   initial: states.first,
   states: {
     [states.first]: {
       on: {},
     },
-    [states.third.fourth]: {},
+    [states.third.deep.wow]: {
+      states: {},
+    },
   },
 });

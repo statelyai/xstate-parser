@@ -1,3 +1,4 @@
+import { memberExpression } from "@babel/generator/node_modules/@babel/types";
 import traverse from "@babel/traverse";
 import * as t from "@babel/types";
 import { createParser } from "./createParser";
@@ -62,14 +63,14 @@ const deepMemberExpressionToPath = (
       path.push(currentLevel.node.name);
     } else if (
       t.isMemberExpression(currentLevel.node) &&
-      t.isIdentifier(currentLevel.node.object)
+      t.isIdentifier(currentLevel.node.property)
     ) {
-      path.push(currentLevel.node.object.name);
+      path.push(currentLevel.node.property.name);
     }
     currentLevel = currentLevel.child;
   }
 
-  return path;
+  return path.reverse();
 };
 
 const deepMemberExpression = createParser({
@@ -83,8 +84,8 @@ const deepMemberExpression = createParser({
     return {
       node,
       child:
-        "property" in node
-          ? deepMemberExpression.parse(node.property, context)
+        "object" in node
+          ? deepMemberExpression.parse(node.object, context)
           : undefined,
     };
   },
@@ -103,7 +104,10 @@ export const objectExpressionWithDeepPath = <Result>(
       while (path[currentIndex]) {
         const pathSection = path[currentIndex];
 
-        const objectProperties = getPropertiesOfObjectExpression(node, context);
+        const objectProperties = getPropertiesOfObjectExpression(
+          currentNode as any,
+          context,
+        );
 
         currentNode = objectProperties.find(
           (property) => property.key === pathSection,
@@ -116,6 +120,16 @@ export const objectExpressionWithDeepPath = <Result>(
     },
   });
 
+const getRootIdentifierOfDeepMemberExpression = (
+  deepMemberExpression: DeepMemberExpression | undefined,
+): t.Identifier | undefined => {
+  if (!deepMemberExpressionToPath) return undefined;
+  if (t.isIdentifier(deepMemberExpression?.node)) {
+    return deepMemberExpression?.node;
+  }
+  return getRootIdentifierOfDeepMemberExpression(deepMemberExpression?.child);
+};
+
 export const memberExpressionReferencingObjectExpression = <Result>(
   parser: AnyParser<Result>,
 ) =>
@@ -124,9 +138,7 @@ export const memberExpressionReferencingObjectExpression = <Result>(
     parseNode: (node, context) => {
       const result = deepMemberExpression.parse(node, context);
 
-      const rootIdentifier = t.isIdentifier(node.object)
-        ? node.object
-        : undefined;
+      const rootIdentifier = getRootIdentifierOfDeepMemberExpression(result);
 
       if (!result) return undefined;
 

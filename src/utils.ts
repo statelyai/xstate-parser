@@ -184,7 +184,7 @@ const propertyKey = unionType([staticPropertyWithKey, dynamicPropertyWithKey]);
  * an object expression
  */
 export const getPropertiesOfObjectExpression = (
-  node: t.ObjectExpression,
+  node: t.ObjectExpression | undefined,
   context: ParserContext,
 ) => {
   const propertiesToReturn: {
@@ -193,7 +193,7 @@ export const getPropertiesOfObjectExpression = (
     keyNode: t.Node;
   }[] = [];
 
-  node.properties.forEach((property) => {
+  node?.properties.forEach((property) => {
     const propertiesToParse: t.Node[] = [property];
 
     const spreadElementResult = spreadElementReferencingIdentifier(
