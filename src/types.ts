@@ -34,4 +34,5 @@ export interface Comment {
 export interface ParseResult {
   machines: MachineParseResult[];
   comments: Comment[];
+  file: t.File | undefined;
 }

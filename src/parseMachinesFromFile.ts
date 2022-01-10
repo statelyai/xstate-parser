@@ -14,6 +14,7 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
     return {
       machines: [],
       comments: [],
+      file: undefined,
     };
   }
 
@@ -29,6 +30,7 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
   let result: ParseResult = {
     machines: [],
     comments: [],
+    file: parseResult,
   };
 
   parseResult.comments?.forEach((comment) => {
@@ -41,13 +43,17 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
   });
 
   traverse(parseResult as any, {
-    CallExpression(path: any) {
-      const ast = MachineCallExpression.parse(path.node, {
+    CallExpression(path) {
+      const ast = MachineCallExpression.parse(path.node as any, {
         file: parseResult,
       });
       if (ast) {
         result.machines.push(
-          new MachineParseResult({ ast, fileComments: result.comments }),
+          new MachineParseResult({
+            ast,
+            fileComments: result.comments,
+            scope: path.scope,
+          }),
         );
       }
     },

@@ -184,10 +184,15 @@ export const getPropertiesOfObjectExpression = (
     node: t.ObjectProperty;
     key: string;
     keyNode: t.Node;
+    property: t.ObjectMethod | t.ObjectProperty | t.SpreadElement;
   }[] = [];
 
   node?.properties.forEach((property) => {
-    const propertiesToParse: t.Node[] = [property];
+    const propertiesToParse: (
+      | t.ObjectMethod
+      | t.ObjectProperty
+      | t.SpreadElement
+    )[] = [property];
 
     const spreadElementResult = spreadElementReferencingIdentifier(
       createParser({
@@ -207,6 +212,7 @@ export const getPropertiesOfObjectExpression = (
           key: `${result.key?.value}`,
           node: result.node,
           keyNode: result.key.node,
+          property,
         });
       }
     });
@@ -273,6 +279,7 @@ export interface ObjectOfReturn<Result> {
     keyNode: t.Node;
     key: string;
     result: Result;
+    property: t.ObjectMethod | t.ObjectProperty | t.SpreadElement;
   }[];
 }
 
@@ -303,6 +310,7 @@ export const objectOf = <Result>(
               key: property.key,
               keyNode: property.keyNode,
               result,
+              property: property.property,
             });
           }
         });

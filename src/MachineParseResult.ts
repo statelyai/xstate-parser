@@ -6,6 +6,7 @@ import { toMachineConfig } from "./toMachineConfig";
 import { StringLiteralNode, Comment } from "./types";
 import { TransitionConfigNode } from "./transitions";
 import { ActionNode, ParsedChooseCondition } from "./actions";
+import type { Scope } from "@babel/traverse";
 
 export interface MachineParseResultStateNode {
   path: string[];
@@ -19,10 +20,16 @@ export class MachineParseResult {
   ast: TMachineCallExpression;
   private fileComments: Comment[];
   private stateNodes: MachineParseResultStateNode[];
+  public scope: Scope;
 
-  constructor(props: { ast: TMachineCallExpression; fileComments: Comment[] }) {
+  constructor(props: {
+    ast: TMachineCallExpression;
+    fileComments: Comment[];
+    scope: Scope;
+  }) {
     this.ast = props.ast;
     this.fileComments = props.fileComments;
+    this.scope = props.scope;
 
     this.stateNodes = this._getAllStateNodes();
   }
@@ -146,7 +153,7 @@ export class MachineParseResult {
     }>();
 
     this.getTransitions().forEach((transition) => {
-      if (transition.config?.cond?.name) {
+      if (typeof transition.config?.cond?.name !== "undefined") {
         conds.add(transition.config.cond.name, {
           node: transition.config.cond.node,
           cond: transition.config.cond.cond,
@@ -157,7 +164,7 @@ export class MachineParseResult {
 
     this.getAllActions().forEach((action) => {
       action.node.chooseConditions?.forEach((chooseCondition) => {
-        if (chooseCondition.conditionNode?.name) {
+        if (typeof chooseCondition.conditionNode?.name !== "undefined") {
           conds.add(chooseCondition.conditionNode.name, {
             node: chooseCondition.conditionNode.node,
             cond: chooseCondition.conditionNode.cond,
@@ -222,7 +229,7 @@ export class MachineParseResult {
     }>();
 
     const addActionIfHasName = (action: ActionNode, statePath: string[]) => {
-      if (action.name) {
+      if (typeof action.name !== "undefined") {
         actions.add(action.name, {
           node: action.node,
           action: action.action,
@@ -249,7 +256,7 @@ export class MachineParseResult {
       stateNode.ast.invoke?.forEach((invoke) => {
         const invokeName =
           typeof invoke.src?.value === "string" ? invoke.src.value : undefined;
-        if (invokeName) {
+        if (typeof invokeName !== "undefined") {
           if (!services[invokeName]) {
             services[invokeName] = [];
           }
