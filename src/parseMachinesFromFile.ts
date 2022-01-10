@@ -39,6 +39,11 @@ export const parseMachinesFromFile = (fileContents: string): ParseResult => {
         node: comment,
         type: "xstate-ignore-next-line",
       });
+    } else if (comment.value.includes("@xstate-layout")) {
+      result.comments.push({
+        node: comment,
+        type: "xstate-layout",
+      });
     }
   });
 

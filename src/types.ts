@@ -28,7 +28,7 @@ export interface AnyParser<Result> {
 
 export interface Comment {
   node: t.CommentLine | t.CommentBlock;
-  type: "xstate-ignore-next-line";
+  type: "xstate-ignore-next-line" | "xstate-layout";
 }
 
 export interface ParseResult {

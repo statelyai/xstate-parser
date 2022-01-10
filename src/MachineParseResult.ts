@@ -14,6 +14,17 @@ export interface MachineParseResultStateNode {
 }
 
 /**
+ * Matches '@xstate-layout awdh123jbawdjhbawd'
+ */
+const layoutRegex = /@xstate-layout [^\s]{1,}/;
+
+const getLayoutString = (commentString: string): string | undefined => {
+  const result = commentString.match(layoutRegex)?.[0];
+
+  return result?.slice(`@xstate-layout `.length);
+};
+
+/**
  * Gives some helpers to the user of the lib
  */
 export class MachineParseResult {
@@ -68,6 +79,24 @@ export class MachineParseResult {
     });
 
     return isIgnored;
+  };
+
+  /**
+   * Returns the raw value of a comment marked with @xstate-layout.
+   *
+   * For instance: '@xstate-layout 1234' will return '1234'
+   */
+  getLayoutCommentValue = (): string | undefined => {
+    if (!this.ast?.callee?.loc) return undefined;
+    const layoutComment = this.fileComments.find((comment) => {
+      if (comment.type !== "xstate-layout") return false;
+
+      return comment.node.loc.end.line === this.ast!.callee.loc!.start.line - 1;
+    });
+
+    const comment = layoutComment?.node.value || "";
+
+    return getLayoutString(comment);
   };
 
   getTransitions = () => {
@@ -229,7 +258,7 @@ export class MachineParseResult {
     }>();
 
     const addActionIfHasName = (action: ActionNode, statePath: string[]) => {
-      if (typeof action.name !== "undefined") {
+      if (typeof action.name !== "undefined" && action.name !== "") {
         actions.add(action.name, {
           node: action.node,
           action: action.action,
