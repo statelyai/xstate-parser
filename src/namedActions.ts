@@ -32,6 +32,7 @@ export const AfterAction = wrapParserResult(
       node: result.node,
       action: after(result.argument1Result?.value || ""),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -43,6 +44,7 @@ export const CancelAction = wrapParserResult(
       node: result.node,
       action: cancel(""),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -54,6 +56,7 @@ export const DoneAction = wrapParserResult(
       node: result.node,
       action: done(""),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -65,6 +68,7 @@ export const EscalateAction = wrapParserResult(
       node: result.node,
       action: escalate(""),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -76,6 +80,7 @@ export const LogAction = wrapParserResult(
       node: result.node,
       action: log(),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -87,6 +92,7 @@ export const PureAction = wrapParserResult(
       node: result.node,
       action: pure(() => []),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -98,6 +104,7 @@ export const RaiseAction = wrapParserResult(
       node: result.node,
       action: raise(""),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -109,6 +116,7 @@ export const RespondAction = wrapParserResult(
       node: result.node,
       action: respond(""),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -120,6 +128,7 @@ export const SendParentAction = wrapParserResult(
       node: result.node,
       action: sendParent(""),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -131,6 +140,7 @@ export const SendUpdateAction = wrapParserResult(
       node: result.node,
       action: sendUpdate(),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -142,6 +152,7 @@ export const StartAction = wrapParserResult(
       node: result.node,
       action: start(""),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -153,6 +164,7 @@ export const StopAction = wrapParserResult(
       node: result.node,
       action: stop(""),
       name: "",
+      declarationType: "inline",
     };
   },
 );

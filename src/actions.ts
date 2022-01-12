@@ -30,12 +30,14 @@ import { unionType } from "./unionType";
 import { maybeIdentifierTo } from "./identifiers";
 import { maybeTsAsExpression } from "./tsAsExpression";
 import { wrapParserResult } from "./wrapParserResult";
+import { DeclarationType } from "./types";
 
 export interface ActionNode {
   node: t.Node;
   action: Action<any, any>;
   name: string;
   chooseConditions?: ParsedChooseCondition[];
+  declarationType: DeclarationType;
 }
 
 export interface ParsedChooseCondition {
@@ -51,6 +53,7 @@ export const ActionAsIdentifier = createParser({
       action: node.name,
       node,
       name: node.name,
+      declarationType: "identifier",
     };
   },
 });
@@ -67,6 +70,7 @@ export const ActionAsFunctionExpression = maybeTsAsExpression(
           node,
           action,
           name: "",
+          declarationType: "inline",
         };
       },
     }),
@@ -82,6 +86,7 @@ export const ActionAsString = maybeTsAsExpression(
           action: node.value,
           node,
           name: node.value,
+          declarationType: "named",
         };
       },
     }),
@@ -95,6 +100,7 @@ export const ActionAsNode = createParser({
       action: "anonymous",
       node,
       name: "",
+      declarationType: "unknown",
     };
   },
 });
@@ -143,6 +149,7 @@ export const ChooseAction = wrapParserResult(
       action: choose(conditions.map((condition) => condition.condition)),
       chooseConditions: conditions,
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -198,6 +205,7 @@ export const AssignAction = wrapParserResult(
       node: result.node,
       action: assign(result.argument1Result?.value || defaultAction),
       name: "",
+      declarationType: "inline",
     };
   },
 );
@@ -234,6 +242,7 @@ export const SendAction = wrapParserResult(
           delay: result.argument2Result?.delay?.value,
         },
       ),
+      declarationType: "inline",
     };
   },
 );
@@ -251,6 +260,7 @@ export const ForwardToAction = wrapParserResult(
         to: result.argument2Result?.to?.value,
       }),
       name: "",
+      declarationType: "inline",
     };
   },
 );

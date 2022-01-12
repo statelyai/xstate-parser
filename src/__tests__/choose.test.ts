@@ -19,10 +19,12 @@ describe("Choose parsing", () => {
       })
     `);
 
-    expect(Object.keys(result.machines[0].getAllNamedConds())).toHaveLength(2);
-
-    expect(Object.keys(result.machines[0].getAllNamedActions())).toHaveLength(
-      4,
+    expect(Object.keys(result.machines[0].getAllConds(["named"]))).toHaveLength(
+      2,
     );
+
+    expect(
+      Object.keys(result.machines[0].getAllActions(["named"])),
+    ).toHaveLength(4);
   });
 });

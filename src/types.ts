@@ -36,3 +36,5 @@ export interface ParseResult {
   comments: Comment[];
   file: t.File | undefined;
 }
+
+export type DeclarationType = "named" | "inline" | "identifier" | "unknown";

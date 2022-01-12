@@ -1,5 +1,6 @@
 import * as t from "@babel/types";
 import { Condition } from "xstate";
+import { DeclarationType } from ".";
 import { createParser } from "./createParser";
 import { unionType } from "./unionType";
 import { isFunctionOrArrowFunctionExpression } from "./utils";
@@ -8,6 +9,7 @@ export interface CondNode {
   node: t.Node;
   name: string;
   cond: Condition<any, any>;
+  declarationType: DeclarationType;
 }
 
 const CondAsFunctionExpression = createParser({
@@ -19,6 +21,7 @@ const CondAsFunctionExpression = createParser({
       cond: () => {
         return false;
       },
+      declarationType: "inline",
     };
   },
 });
@@ -30,6 +33,7 @@ const CondAsStringLiteral = createParser({
       node,
       name: node.value,
       cond: node.value,
+      declarationType: "named",
     };
   },
 });
@@ -41,6 +45,19 @@ const CondAsNode = createParser({
       node,
       name: "",
       cond: "anonymous",
+      declarationType: "unknown",
+    };
+  },
+});
+
+const CondAsIdentifier = createParser({
+  babelMatcher: t.isIdentifier,
+  parseNode: (node): CondNode => {
+    return {
+      node,
+      name: "",
+      cond: "anonymous",
+      declarationType: "identifier",
     };
   },
 });
@@ -48,5 +65,6 @@ const CondAsNode = createParser({
 export const Cond = unionType([
   CondAsFunctionExpression,
   CondAsStringLiteral,
+  CondAsIdentifier,
   CondAsNode,
 ]);

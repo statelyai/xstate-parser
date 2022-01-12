@@ -7,6 +7,7 @@ import { StringLiteralNode, Comment } from "./types";
 import { TransitionConfigNode } from "./transitions";
 import { ActionNode, ParsedChooseCondition } from "./actions";
 import type { Scope } from "@babel/traverse";
+import { DeclarationType } from ".";
 
 export interface MachineParseResultStateNode {
   path: string[];
@@ -180,7 +181,14 @@ export class MachineParseResult {
     return toMachineConfig(this.ast);
   };
 
-  getAllNamedConds = () => {
+  getAllConds = (
+    declarationTypes: DeclarationType[] = [
+      "identifier",
+      "inline",
+      "unknown",
+      "named",
+    ],
+  ) => {
     const conds = new RecordOfArrays<{
       node: t.Node;
       cond: Condition<any, any>;
@@ -188,7 +196,10 @@ export class MachineParseResult {
     }>();
 
     this.getTransitions().forEach((transition) => {
-      if (typeof transition.config?.cond?.name !== "undefined") {
+      if (
+        transition.config.cond?.declarationType &&
+        declarationTypes.includes(transition.config.cond?.declarationType)
+      ) {
         conds.add(transition.config.cond.name, {
           node: transition.config.cond.node,
           cond: transition.config.cond.cond,
@@ -197,9 +208,14 @@ export class MachineParseResult {
       }
     });
 
-    this.getAllActions().forEach((action) => {
+    this._getAllActions().forEach((action) => {
       action.node.chooseConditions?.forEach((chooseCondition) => {
-        if (typeof chooseCondition.conditionNode?.name !== "undefined") {
+        if (
+          chooseCondition.conditionNode?.declarationType &&
+          declarationTypes.includes(
+            chooseCondition.conditionNode?.declarationType,
+          )
+        ) {
           conds.add(chooseCondition.conditionNode.name, {
             node: chooseCondition.conditionNode.node,
             cond: chooseCondition.conditionNode.cond,
@@ -212,7 +228,7 @@ export class MachineParseResult {
     return conds.toObject();
   };
 
-  private getAllActions = () => {
+  private _getAllActions = () => {
     const actions: {
       node: ActionNode;
       statePath: string[];
@@ -255,7 +271,14 @@ export class MachineParseResult {
     return actions;
   };
 
-  getAllNamedActions = () => {
+  getAllActions = (
+    declarationTypes: DeclarationType[] = [
+      "identifier",
+      "inline",
+      "unknown",
+      "named",
+    ],
+  ) => {
     const actions = new RecordOfArrays<{
       node: t.Node;
       action: Action<any, any>;
@@ -264,7 +287,7 @@ export class MachineParseResult {
     }>();
 
     const addActionIfHasName = (action: ActionNode, statePath: string[]) => {
-      if (typeof action.name !== "undefined" && action.name !== "") {
+      if (action && declarationTypes.includes(action.declarationType)) {
         actions.add(action.name, {
           node: action.node,
           action: action.action,
@@ -274,14 +297,21 @@ export class MachineParseResult {
       }
     };
 
-    this.getAllActions().forEach((action) => {
+    this._getAllActions().forEach((action) => {
       addActionIfHasName(action.node, action.statePath);
     });
 
     return actions.toObject();
   };
 
-  getAllNamedServices = () => {
+  getAllServices = (
+    declarationTypes: DeclarationType[] = [
+      "identifier",
+      "inline",
+      "unknown",
+      "named",
+    ],
+  ) => {
     const services: Record<
       string,
       { node: t.Node; name: string; statePath: string[]; srcNode?: t.Node }[]
@@ -291,7 +321,11 @@ export class MachineParseResult {
       stateNode.ast.invoke?.forEach((invoke) => {
         const invokeName =
           typeof invoke.src?.value === "string" ? invoke.src.value : undefined;
-        if (typeof invokeName !== "undefined") {
+        if (
+          invokeName &&
+          invoke.src?.declarationType &&
+          declarationTypes.includes(invoke.src?.declarationType)
+        ) {
           if (!services[invokeName]) {
             services[invokeName] = [];
           }

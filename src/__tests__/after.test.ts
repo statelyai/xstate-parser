@@ -12,8 +12,8 @@ describe("After parsing", () => {
       })
     `);
 
-    expect(Object.keys(result.machines[0].getAllNamedActions())).toHaveLength(
-      2,
-    );
+    expect(
+      Object.keys(result.machines[0].getAllActions(["named"])),
+    ).toHaveLength(2);
   });
 });

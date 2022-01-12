@@ -80,7 +80,7 @@ describe("MachineParseResult", () => {
     })
     `);
 
-    const conds = result.machines[0].getAllNamedConds();
+    const conds = result.machines[0].getAllConds(["named"]);
 
     expect(Object.keys(conds)).toHaveLength(5);
 
@@ -96,7 +96,7 @@ describe("MachineParseResult", () => {
       })
     `);
 
-    const services = result.machines[0].getAllNamedServices();
+    const services = result.machines[0].getAllServices(["named"]);
 
     expect(Object.keys(services)).toHaveLength(1);
   });

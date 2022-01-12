@@ -1,4 +1,5 @@
 import * as t from "@babel/types";
+import { DeclarationType } from ".";
 import { createParser } from "./createParser";
 import { maybeIdentifierTo } from "./identifiers";
 import { BooleanLiteral, StringLiteral } from "./scalars";
@@ -14,6 +15,7 @@ import {
 interface InvokeNode {
   node: t.Node;
   value: string | (() => Promise<void>);
+  declarationType: DeclarationType;
 }
 
 const InvokeSrcFunctionExpression = maybeTsAsExpression(
@@ -27,6 +29,7 @@ const InvokeSrcFunctionExpression = maybeTsAsExpression(
         return {
           value,
           node,
+          declarationType: "inline",
         };
       },
     }),
@@ -38,12 +41,32 @@ const InvokeSrcNode = createParser({
   parseNode: (node): InvokeNode => ({
     value: "anonymous",
     node,
+    declarationType: "unknown",
+  }),
+});
+
+const InvokeSrcStringLiteral = createParser({
+  babelMatcher: t.isStringLiteral,
+  parseNode: (node): InvokeNode => ({
+    value: node.value,
+    node,
+    declarationType: "named",
+  }),
+});
+
+const InvokeSrcIdentifier = createParser({
+  babelMatcher: t.isIdentifier,
+  parseNode: (node): InvokeNode => ({
+    value: "anonymous",
+    node,
+    declarationType: "identifier",
   }),
 });
 
 const InvokeSrc = unionType([
-  StringLiteral,
+  InvokeSrcStringLiteral,
   InvokeSrcFunctionExpression,
+  InvokeSrcIdentifier,
   InvokeSrcNode,
 ]);
 
