@@ -1,4 +1,4 @@
-import { parseMachinesFromFile } from "..";
+import { groupByUniqueName, parseMachinesFromFile } from "..";
 
 describe("Choose parsing", () => {
   it("Should be able to grab actions and guardsdeclared inside a choose action", () => {
@@ -19,12 +19,14 @@ describe("Choose parsing", () => {
       })
     `);
 
-    expect(Object.keys(result.machines[0].getAllConds(["named"]))).toHaveLength(
-      2,
-    );
+    expect(
+      Object.keys(groupByUniqueName(result.machines[0].getAllConds(["named"]))),
+    ).toHaveLength(2);
 
     expect(
-      Object.keys(result.machines[0].getAllActions(["named"])),
+      Object.keys(
+        groupByUniqueName(result.machines[0].getAllActions(["named"])),
+      ),
     ).toHaveLength(4);
   });
 });

@@ -8,6 +8,7 @@ import { TransitionConfigNode } from "./transitions";
 import { ActionNode, ParsedChooseCondition } from "./actions";
 import type { Scope } from "@babel/traverse";
 import { DeclarationType } from ".";
+import { RecordOfArrays } from "./RecordOfArrays";
 
 export interface MachineParseResultStateNode {
   path: string[];
@@ -189,18 +190,20 @@ export class MachineParseResult {
       "named",
     ],
   ) => {
-    const conds = new RecordOfArrays<{
+    const conds: {
       node: t.Node;
       cond: Condition<any, any>;
       statePath: string[];
-    }>();
+      name: string;
+    }[] = [];
 
     this.getTransitions().forEach((transition) => {
       if (
         transition.config.cond?.declarationType &&
         declarationTypes.includes(transition.config.cond?.declarationType)
       ) {
-        conds.add(transition.config.cond.name, {
+        conds.push({
+          name: transition.config.cond.name,
           node: transition.config.cond.node,
           cond: transition.config.cond.cond,
           statePath: transition.fromPath,
@@ -216,7 +219,8 @@ export class MachineParseResult {
             chooseCondition.conditionNode?.declarationType,
           )
         ) {
-          conds.add(chooseCondition.conditionNode.name, {
+          conds.push({
+            name: chooseCondition.conditionNode.name,
             node: chooseCondition.conditionNode.node,
             cond: chooseCondition.conditionNode.cond,
             statePath: action.statePath,
@@ -225,7 +229,7 @@ export class MachineParseResult {
       });
     });
 
-    return conds.toObject();
+    return conds;
   };
 
   private _getAllActions = () => {
@@ -279,16 +283,18 @@ export class MachineParseResult {
       "named",
     ],
   ) => {
-    const actions = new RecordOfArrays<{
+    const actions: {
       node: t.Node;
       action: Action<any, any>;
       statePath: string[];
       chooseConditions?: ParsedChooseCondition[];
-    }>();
+      name: string;
+    }[] = [];
 
     const addActionIfHasName = (action: ActionNode, statePath: string[]) => {
       if (action && declarationTypes.includes(action.declarationType)) {
-        actions.add(action.name, {
+        actions.push({
+          name: action.name,
           node: action.node,
           action: action.action,
           statePath,
@@ -301,7 +307,7 @@ export class MachineParseResult {
       addActionIfHasName(action.node, action.statePath);
     });
 
-    return actions.toObject();
+    return actions;
   };
 
   getAllServices = (
@@ -312,10 +318,12 @@ export class MachineParseResult {
       "named",
     ],
   ) => {
-    const services: Record<
-      string,
-      { node: t.Node; name: string; statePath: string[]; srcNode?: t.Node }[]
-    > = {};
+    const services: {
+      node: t.Node;
+      name: string;
+      statePath: string[];
+      srcNode?: t.Node;
+    }[] = [];
 
     this.stateNodes.map((stateNode) => {
       stateNode.ast.invoke?.forEach((invoke) => {
@@ -326,11 +334,7 @@ export class MachineParseResult {
           invoke.src?.declarationType &&
           declarationTypes.includes(invoke.src?.declarationType)
         ) {
-          if (!services[invokeName]) {
-            services[invokeName] = [];
-          }
-
-          services[invokeName].push({
+          services.push({
             name: invokeName,
             node: invoke.node,
             statePath: stateNode.path,
@@ -390,17 +394,4 @@ export class MachineParseResult {
 
     return node;
   };
-}
-
-class RecordOfArrays<T> {
-  private map: Record<string, T[]> = {};
-
-  add = (key: string, value: T) => {
-    if (!this.map[key]) {
-      this.map[key] = [];
-    }
-    this.map[key].push(value);
-  };
-
-  toObject = () => this.map;
 }

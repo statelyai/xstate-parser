@@ -1,3 +1,4 @@
+import { groupByUniqueName } from "..";
 import { parseMachinesFromFile } from "../parseMachinesFromFile";
 
 describe("MachineParseResult", () => {
@@ -80,7 +81,7 @@ describe("MachineParseResult", () => {
     })
     `);
 
-    const conds = result.machines[0].getAllConds(["named"]);
+    const conds = groupByUniqueName(result.machines[0].getAllConds(["named"]));
 
     expect(Object.keys(conds)).toHaveLength(5);
 
