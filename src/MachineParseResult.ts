@@ -29,7 +29,7 @@ const getLayoutString = (commentString: string): string | undefined => {
  */
 export class MachineParseResult {
   ast: TMachineCallExpression;
-  private fileComments: Comment[];
+  public fileComments: Comment[];
   private stateNodes: MachineParseResultStateNode[];
   public scope: Scope;
 
@@ -86,7 +86,7 @@ export class MachineParseResult {
    *
    * For instance: '@xstate-layout 1234' will return '1234'
    */
-  getLayoutCommentValue = (): string | undefined => {
+  getLayoutComment = (): { value: string; comment: Comment } | undefined => {
     if (!this.ast?.callee?.loc) return undefined;
     const layoutComment = this.fileComments.find((comment) => {
       if (comment.type !== "xstate-layout") return false;
@@ -94,9 +94,15 @@ export class MachineParseResult {
       return comment.node.loc.end.line === this.ast!.callee.loc!.start.line - 1;
     });
 
+    if (!layoutComment) return undefined;
+
     const comment = layoutComment?.node.value || "";
 
-    return getLayoutString(comment);
+    const value = getLayoutString(comment);
+
+    if (!value) return undefined;
+
+    return { comment: layoutComment, value };
   };
 
   getTransitions = () => {

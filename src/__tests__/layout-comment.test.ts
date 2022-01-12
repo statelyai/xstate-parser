@@ -7,6 +7,8 @@ describe("Layout comments", () => {
       const machine = createMachine({});
     `);
 
-    expect(result.machines[0].getLayoutCommentValue()).toEqual(`layout-string`);
+    expect(result.machines[0].getLayoutComment()?.value).toEqual(
+      `layout-string`,
+    );
   });
 });
