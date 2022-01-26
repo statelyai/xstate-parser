@@ -1,5 +1,5 @@
 import * as t from "@babel/types";
-import { Action, ChooseConditon } from "xstate";
+import { Action, ChooseCondition } from "xstate";
 import { assign, choose, forwardTo, send } from "xstate/lib/actions";
 
 import { Cond, CondNode } from "./conds";
@@ -41,7 +41,7 @@ export interface ActionNode {
 }
 
 export interface ParsedChooseCondition {
-  condition: ChooseConditon<any, any>;
+  condition: ChooseCondition<any, any>;
   actionNodes: ActionNode[];
   conditionNode?: CondNode;
 }

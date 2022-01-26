@@ -320,22 +320,24 @@ export class MachineParseResult {
   ) => {
     const services: {
       node: t.Node;
-      name: string;
+      src: string;
+      id: string | undefined;
       statePath: string[];
       srcNode?: t.Node;
     }[] = [];
 
     this.stateNodes.map((stateNode) => {
       stateNode.ast.invoke?.forEach((invoke) => {
-        const invokeName =
+        const invokeSrc =
           typeof invoke.src?.value === "string" ? invoke.src.value : undefined;
         if (
-          invokeName &&
+          invokeSrc &&
           invoke.src?.declarationType &&
           declarationTypes.includes(invoke.src?.declarationType)
         ) {
           services.push({
-            name: invokeName,
+            src: invokeSrc,
+            id: invoke.id?.value,
             node: invoke.node,
             statePath: stateNode.path,
             srcNode: invoke.src?.node,

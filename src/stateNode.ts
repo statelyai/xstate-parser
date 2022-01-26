@@ -1,7 +1,9 @@
-import { MaybeArrayOfActions } from "./actions";
 import * as t from "@babel/types";
+import { MaybeArrayOfActions } from "./actions";
+import { Context } from "./context";
 import { History } from "./history";
 import { Invoke } from "./invoke";
+import { StateMeta } from "./meta";
 import { AnyNode, BooleanLiteral, StringLiteral } from "./scalars";
 import { MaybeTransitionArray } from "./transitions";
 import { AnyParser } from "./types";
@@ -12,8 +14,6 @@ import {
   ObjectOfReturn,
   objectTypeWithKnownKeys,
 } from "./utils";
-import { StateMeta } from "./meta";
-import { maybeIdentifierTo } from "./identifiers";
 
 const On = objectOf(MaybeTransitionArray);
 
@@ -49,6 +49,8 @@ export type StateNodeReturn = {
   node: t.Node;
   meta?: GetParserResult<typeof StateMeta>;
   tsTypes?: GetParserResult<typeof BooleanLiteral>;
+  context?: GetParserResult<typeof Context>;
+  data?: GetParserResult<typeof AnyNode>;
 };
 
 const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
@@ -71,6 +73,8 @@ const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     tags: Tags,
     states: objectOf(StateNodeObject),
     meta: StateMeta,
+    context: Context,
+    data: AnyNode,
   }),
 );
 

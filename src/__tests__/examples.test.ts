@@ -23,7 +23,9 @@ describe("Examples", () => {
 
       exampleMachines.forEach((machine, index) => {
         try {
-          const sourceMachineConfig = testUtils.withoutContext(machine.config);
+          const sourceMachineConfig = testUtils.withoutContext(
+            machine.config as any,
+          );
 
           const machineConfigUnderTest = machines[index].toConfig();
 
