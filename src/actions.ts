@@ -31,6 +31,7 @@ import { maybeIdentifierTo } from "./identifiers";
 import { maybeTsAsExpression } from "./tsAsExpression";
 import { wrapParserResult } from "./wrapParserResult";
 import { DeclarationType } from "./types";
+import { INLINE_IMPLEMENTATION_TYPE } from "./constants";
 
 export interface ActionNode {
   node: t.Node;
@@ -65,7 +66,7 @@ export const ActionAsFunctionExpression = maybeTsAsExpression(
       parseNode: (node): ActionNode => {
         const action = function actions() {};
 
-        action.toJSON = () => "anonymous";
+        action.toJSON = () => INLINE_IMPLEMENTATION_TYPE;
         return {
           node,
           action,
@@ -97,7 +98,7 @@ export const ActionAsNode = createParser({
   babelMatcher: t.isNode,
   parseNode: (node): ActionNode => {
     return {
-      action: "anonymous",
+      action: INLINE_IMPLEMENTATION_TYPE,
       node,
       name: "",
       declarationType: "unknown",

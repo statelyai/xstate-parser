@@ -5,7 +5,9 @@ import { History } from "./history";
 import { Invoke } from "./invoke";
 import { StateMeta } from "./meta";
 import { AnyNode, BooleanLiteral, StringLiteral } from "./scalars";
+import { Schema } from "./schema";
 import { MaybeTransitionArray } from "./transitions";
+import { TsTypes } from "./tsTypes";
 import { AnyParser } from "./types";
 import {
   GetParserResult,
@@ -48,9 +50,11 @@ export type StateNodeReturn = {
   states?: GetParserResult<AnyParser<ObjectOfReturn<StateNodeReturn>>>;
   node: t.Node;
   meta?: GetParserResult<typeof StateMeta>;
-  tsTypes?: GetParserResult<typeof BooleanLiteral>;
+  tsTypes?: GetParserResult<typeof TsTypes>;
   context?: GetParserResult<typeof Context>;
   data?: GetParserResult<typeof AnyNode>;
+  schema?: GetParserResult<typeof Schema>;
+  preserveActionOrder?: GetParserResult<typeof BooleanLiteral>;
 };
 
 const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
@@ -58,7 +62,8 @@ const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     id: StringLiteral,
     initial: StringLiteral,
     type: StringLiteral,
-    tsTypes: BooleanLiteral,
+    tsTypes: TsTypes,
+    schema: Schema,
     history: History,
     delimiter: StringLiteral,
     entry: MaybeArrayOfActions,
@@ -75,6 +80,7 @@ const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     meta: StateMeta,
     context: Context,
     data: AnyNode,
+    preserveActionOrder: BooleanLiteral,
   }),
 );
 

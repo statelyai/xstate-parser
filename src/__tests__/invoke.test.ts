@@ -1,3 +1,4 @@
+import { INLINE_IMPLEMENTATION_TYPE } from "../constants";
 import { parseMachinesFromFile } from "../parseMachinesFromFile";
 
 describe("Invoke", () => {
@@ -16,6 +17,6 @@ describe("Invoke", () => {
      * The function should be parsed as
      * anonymous
      */
-    expect(config).toContain("anonymous");
+    expect(config).toContain(INLINE_IMPLEMENTATION_TYPE);
   });
 });

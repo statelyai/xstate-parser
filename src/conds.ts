@@ -1,6 +1,7 @@
 import * as t from "@babel/types";
 import { Condition } from "xstate";
 import { DeclarationType } from ".";
+import { INLINE_IMPLEMENTATION_TYPE } from "./constants";
 import { createParser } from "./createParser";
 import { unionType } from "./unionType";
 import { isFunctionOrArrowFunctionExpression } from "./utils";
@@ -44,7 +45,7 @@ const CondAsNode = createParser({
     return {
       node,
       name: "",
-      cond: "anonymous",
+      cond: INLINE_IMPLEMENTATION_TYPE,
       declarationType: "unknown",
     };
   },
@@ -56,7 +57,7 @@ const CondAsIdentifier = createParser({
     return {
       node,
       name: "",
-      cond: "anonymous",
+      cond: INLINE_IMPLEMENTATION_TYPE,
       declarationType: "identifier",
     };
   },

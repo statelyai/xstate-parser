@@ -5,6 +5,7 @@ import {
   TransitionConfigOrTarget,
 } from "xstate";
 import { MaybeArrayOfActions } from "./actions";
+import { INLINE_IMPLEMENTATION_TYPE } from "./constants";
 import { TMachineCallExpression } from "./machineCallExpression";
 import { StateNodeReturn } from "./stateNode";
 import { MaybeTransitionArray } from "./transitions";
@@ -92,7 +93,7 @@ const parseStateNode = (
 
     astResult.invoke.forEach((invoke) => {
       const toPush: typeof invokes[number] = {
-        src: "anonymous",
+        src: INLINE_IMPLEMENTATION_TYPE,
       };
       if (invoke.src) {
         toPush.src = invoke.src.value;

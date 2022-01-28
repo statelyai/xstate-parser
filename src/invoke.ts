@@ -1,5 +1,6 @@
 import * as t from "@babel/types";
 import { DeclarationType } from ".";
+import { INLINE_IMPLEMENTATION_TYPE } from "./constants";
 import { createParser } from "./createParser";
 import { maybeIdentifierTo } from "./identifiers";
 import { BooleanLiteral, StringLiteral } from "./scalars";
@@ -25,7 +26,7 @@ const InvokeSrcFunctionExpression = maybeTsAsExpression(
       parseNode: (node): InvokeNode => {
         const value = async function src() {};
 
-        value.toJSON = () => "anonymous";
+        value.toJSON = () => INLINE_IMPLEMENTATION_TYPE;
         return {
           value,
           node,
@@ -39,7 +40,7 @@ const InvokeSrcFunctionExpression = maybeTsAsExpression(
 const InvokeSrcNode = createParser({
   babelMatcher: t.isNode,
   parseNode: (node): InvokeNode => ({
-    value: "anonymous",
+    value: INLINE_IMPLEMENTATION_TYPE,
     node,
     declarationType: "unknown",
   }),
@@ -57,7 +58,7 @@ const InvokeSrcStringLiteral = createParser({
 const InvokeSrcIdentifier = createParser({
   babelMatcher: t.isIdentifier,
   parseNode: (node): InvokeNode => ({
-    value: "anonymous",
+    value: INLINE_IMPLEMENTATION_TYPE,
     node,
     declarationType: "identifier",
   }),
