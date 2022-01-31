@@ -1,13 +1,11 @@
-import traverse from "@babel/traverse";
 import * as t from "@babel/types";
 import { createParser } from "./createParser";
 import {
   identifierReferencingVariableDeclaration,
   maybeIdentifierTo,
-  memberExpressionReferencingEnumMember,
 } from "./identifiers";
 import {
-  AnyNode,
+  Identifier,
   NumericLiteral,
   StringLiteral,
   TemplateLiteral,
@@ -82,6 +80,19 @@ export const arrayOf = <Result>(
     },
   });
 };
+
+export const objectMethod = createParser({
+  babelMatcher: t.isObjectMethod,
+  parseNode: (node, context) => {
+    return {
+      node,
+      key: wrapParserResult(Identifier, ({ node }) => ({
+        node: node,
+        value: node.name,
+      })).parse(node.key, context),
+    };
+  },
+});
 
 export const staticObjectProperty = <KeyResult>(
   keyParser: AnyParser<KeyResult>,
@@ -170,7 +181,13 @@ const dynamicPropertyWithKey = dynamicObjectProperty(
   ),
 );
 
-const propertyKey = unionType([staticPropertyWithKey, dynamicPropertyWithKey]);
+const propertyKey = unionType<{
+  node: t.ObjectMethod | t.ObjectProperty;
+  key?: {
+    node: t.Node;
+    value: string | number | undefined;
+  };
+}>([objectMethod, staticPropertyWithKey, dynamicPropertyWithKey]);
 
 /**
  * Utility function for grabbing the properties of
@@ -181,7 +198,7 @@ export const getPropertiesOfObjectExpression = (
   context: ParserContext,
 ) => {
   const propertiesToReturn: {
-    node: t.ObjectProperty;
+    node: t.ObjectProperty | t.ObjectMethod;
     key: string;
     keyNode: t.Node;
     property: t.ObjectMethod | t.ObjectProperty | t.SpreadElement;
@@ -261,10 +278,15 @@ export const objectTypeWithKnownKeys = <
 
             if (!parser) return;
 
-            const result = parser.parse(property.node.value, context);
+            let result: any | undefined;
 
-            // @ts-ignore
-            toReturn[key] = result;
+            if (t.isObjectMethod(property.node)) {
+              result = parser.parse(property.node, context);
+            } else if (t.isObjectProperty(property.node)) {
+              result = parser.parse(property.node.value, context);
+            }
+
+            (toReturn as any)[key] = result;
           });
 
           return toReturn as GetObjectKeysResult<T>;
@@ -303,7 +325,13 @@ export const objectOf = <Result>(
         } as ObjectOfReturn<Result>;
 
         properties.forEach((property) => {
-          const result = parser.parse(property.node.value, context);
+          let result: Result | undefined;
+
+          if (t.isObjectMethod(property.node)) {
+            result = parser.parse(property.node, context);
+          } else if (t.isObjectProperty(property.node)) {
+            result = parser.parse(property.node.value, context);
+          }
 
           if (result) {
             toReturn.properties.push({

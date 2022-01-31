@@ -133,9 +133,12 @@ export const objectExpressionWithDeepPath = <Result>(
           context,
         );
 
-        currentNode = objectProperties.find(
-          (property) => property.key === pathSection,
-        )?.node?.value;
+        currentNode = (
+          objectProperties.find(
+            (property) =>
+              property.key === pathSection && t.isObjectProperty(property.node),
+          )?.node as t.ObjectProperty
+        )?.value;
 
         currentIndex++;
       }
