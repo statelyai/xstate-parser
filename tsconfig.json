@@ -15,7 +15,7 @@
     "skipLibCheck": true,
     "jsx": "react",
     "lib": [
-      "es6",
+      "es2019",
       "dom"
     ],
     "strictPropertyInitialization": true,
