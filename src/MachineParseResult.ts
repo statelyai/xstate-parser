@@ -7,7 +7,7 @@ import { StringLiteralNode, Comment } from "./types";
 import { TransitionConfigNode } from "./transitions";
 import { ActionNode, ParsedChooseCondition } from "./actions";
 import type { Scope } from "@babel/traverse";
-import { DeclarationType } from ".";
+import { DeclarationType, INLINE_IMPLEMENTATION_TYPE } from ".";
 import { RecordOfArrays } from "./RecordOfArrays";
 
 export interface MachineParseResultStateNode {
@@ -331,12 +331,11 @@ export class MachineParseResult {
         const invokeSrc =
           typeof invoke.src?.value === "string" ? invoke.src.value : undefined;
         if (
-          invokeSrc &&
           invoke.src?.declarationType &&
           declarationTypes.includes(invoke.src?.declarationType)
         ) {
           services.push({
-            src: invokeSrc,
+            src: invokeSrc ?? INLINE_IMPLEMENTATION_TYPE,
             id: invoke.id?.value,
             node: invoke.node,
             statePath: stateNode.path,
