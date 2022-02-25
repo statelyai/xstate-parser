@@ -83,6 +83,10 @@ const parseStateNode = (
     };
   }
 
+  if (astResult.description) {
+    config.description = astResult.description.value;
+  }
+
   if (astResult.onDone) {
     // @ts-ignore
     config.onDone = getTransitions(astResult.onDone);

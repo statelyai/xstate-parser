@@ -50,6 +50,7 @@ export type StateNodeReturn = {
   states?: GetParserResult<AnyParser<ObjectOfReturn<StateNodeReturn>>>;
   node: t.Node;
   meta?: GetParserResult<typeof StateMeta>;
+  description?: GetParserResult<typeof StringLiteral>;
   tsTypes?: GetParserResult<typeof TsTypes>;
   context?: GetParserResult<typeof Context>;
   data?: GetParserResult<typeof AnyNode>;
@@ -81,6 +82,7 @@ const StateNodeObject: AnyParser<StateNodeReturn> = objectTypeWithKnownKeys(
     context: Context,
     data: AnyNode,
     preserveActionOrder: BooleanLiteral,
+    description: StringLiteral,
   }),
 );
 
