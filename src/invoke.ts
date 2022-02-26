@@ -78,7 +78,7 @@ const InvokeConfigObject = objectTypeWithKnownKeys({
   onError: MaybeTransitionArray,
   autoForward: BooleanLiteral,
   forward: BooleanLiteral,
-  context: Context,
+  data: Context,
 });
 
 export const Invoke = maybeArrayOf(InvokeConfigObject);
