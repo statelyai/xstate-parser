@@ -102,6 +102,10 @@ const parseStateNode = (
       if (invoke.id) {
         toPush.id = invoke.id.value;
       }
+      
+      if (invoke.data) {
+        toPush.data = invoke.data.value;
+      }
 
       if (invoke.autoForward) {
         toPush.autoForward = invoke.autoForward.value;
