@@ -12,6 +12,7 @@ import {
   maybeArrayOf,
   objectTypeWithKnownKeys,
 } from "./utils";
+import { Context } from "./context";
 
 interface InvokeNode {
   node: t.Node;
