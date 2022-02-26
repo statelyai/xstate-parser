@@ -3,7 +3,7 @@ import { DeclarationType } from ".";
 import { INLINE_IMPLEMENTATION_TYPE } from "./constants";
 import { createParser } from "./createParser";
 import { maybeIdentifierTo } from "./identifiers";
-import { BooleanLiteral, StringLiteral } from "./scalars";
+import { AnyNode, BooleanLiteral, StringLiteral } from "./scalars";
 import { MaybeTransitionArray } from "./transitions";
 import { maybeTsAsExpression } from "./tsAsExpression";
 import { unionType } from "./unionType";
@@ -12,7 +12,6 @@ import {
   maybeArrayOf,
   objectTypeWithKnownKeys,
 } from "./utils";
-import { Context } from "./context";
 
 interface InvokeNode {
   node: t.Node;
@@ -79,7 +78,7 @@ const InvokeConfigObject = objectTypeWithKnownKeys({
   onError: MaybeTransitionArray,
   autoForward: BooleanLiteral,
   forward: BooleanLiteral,
-  data: Context,
+  data: AnyNode,
 });
 
 export const Invoke = maybeArrayOf(InvokeConfigObject);
