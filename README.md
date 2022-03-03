@@ -1,3 +1,1 @@
-# xstate-parser
-
-Try it out at https://xstate-parser-example-site.vercel.app/
+This repository now lives at https://github.com/statelyai/xstate-tools/tree/main/packages/machine-extractor
